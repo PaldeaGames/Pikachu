@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡ Pikachu Collection — Paldea Games</title>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --yellow:    #FFD700;
+    --yellow2:   #FFC107;
+    --dark:      #1a1a2e;
+    --darker:    #0f0f1a;
+    --red:       #e53935;
+    --green:     #00c853;
+    --green-hi:  #69f0ae;
+    --blue-cart: #1565c0;
+    --card-bg:   #16213e;
+    --border:    #2a2a4a;
+    --text:      #e8e8f0;
+    --muted:     #8888aa;
+    --hover-glow: 0 0 0 3px #FFD700, 0 0 18px #FFD70088;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--darker);
+    color: var(--text);
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 20%, #2a1a0a44 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 80%, #1a2a0a44 0%, transparent 60%);
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    border-bottom: 3px solid var(--yellow);
+    padding: 18px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 200;
+    box-shadow: 0 4px 20px #00000088;
+  }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .logo-bolt { font-size: 2rem; filter: drop-shadow(0 0 8px #FFD700); }
+  .header-title { font-family: 'Bangers', cursive; letter-spacing: 2px; }
+  .header-title h1 { font-size: 1.8rem; color: var(--yellow); line-height: 1; }
+  .header-title p  { font-size: 0.8rem; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+
+  .cart-btn {
+    position: relative;
+    background: var(--yellow);
+    color: var(--darker);
+    border: none; cursor: pointer;
+    font-family: 'Bangers', cursive;
+    font-size: 1.1rem; letter-spacing: 1px;
+    padding: 10px 20px; border-radius: 12px;
+    display: flex; align-items: center; gap: 8px;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px #FFD70044;
+  }
+  .cart-btn:hover { transform: scale(1.05); box-shadow: 0 6px 20px #FFD70088; }
+  .cart-count {
+    background: var(--red); color: #fff;
+    border-radius: 50%; width: 22px; height: 22px;
+    font-size: 0.75rem; font-family: 'Nunito', sans-serif; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    position: absolute; top: -8px; right: -8px;
+  }
+
+  /* ── NAVEGACIÓN PLANAS ── */
+  .nav-planas {
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px; padding: 20px;
+    flex-wrap: wrap;
+  }
+  .nav-btn {
+    background: var(--card-bg);
+    border: 2px solid var(--border);
+    color: var(--text); cursor: pointer;
+    font-family: 'Nunito', sans-serif; font-weight: 700;
+    padding: 10px 22px; border-radius: 24px;
+    transition: all 0.2s; font-size: 0.9rem;
+  }
+  .nav-btn:hover, .nav-btn.active {
+    background: var(--yellow); color: var(--darker);
+    border-color: var(--yellow);
+    box-shadow: 0 0 12px #FFD70066;
+  }
+  .nav-arrow {
+    background: transparent; border: 2px solid var(--yellow);
+    color: var(--yellow); cursor: pointer;
+    width: 40px; height: 40px; border-radius: 50%;
+    font-size: 1.2rem; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .nav-arrow:hover { background: var(--yellow); color: var(--darker); }
+  .nav-arrow:disabled { opacity: 0.3; cursor: default; }
+
+  /* ── CONTENIDO PRINCIPAL ── */
+  main { max-width: 1400px; margin: 0 auto; padding: 0 20px 40px; }
+
+  /* ── PAR DE PLANAS ── */
+  .par-planas {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    margin-bottom: 32px;
+  }
+  @media (max-width: 900px) {
+    .par-planas { grid-template-columns: 1fr; }
+  }
+
+  /* ── PLANA ── */
+  .plana-section {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+  .plana-section.hover-highlight { border-color: var(--green) !important; box-shadow: 0 0 20px #00c85322; }
+
+  .plana-header {
+    background: linear-gradient(90deg, #0f3460, #1a1a2e);
+    padding: 14px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 2px solid var(--yellow);
+  }
+  .plana-title { font-family: 'Bangers', cursive; font-size: 1.3rem; letter-spacing: 1px; color: var(--yellow); }
+
+  .btn-ver-plana {
+    background: transparent;
+    border: 1.5px solid var(--yellow);
+    color: var(--yellow); cursor: pointer;
+    font-size: 0.78rem; font-weight: 700;
+    padding: 6px 14px; border-radius: 20px;
+    transition: all 0.2s;
+  }
+  .btn-ver-plana:hover { background: var(--yellow); color: var(--darker); }
+
+  /* ── IMAGEN PLANA ── */
+  .plana-img-wrap {
+    position: relative;
+    background: #0a0a18;
+    padding: 12px;
+    text-align: center;
+  }
+  .plana-img {
+    max-width: 100%; max-height: 260px;
+    border-radius: 8px; cursor: pointer;
+    transition: transform 0.3s;
+    object-fit: contain;
+  }
+  .plana-img:hover { transform: scale(1.02); }
+
+  .img-placeholder {
+    height: 220px;
+    background: linear-gradient(135deg, #16213e, #0f3460);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 8px; color: var(--muted);
+    font-size: 0.85rem; border: 2px dashed var(--border);
+  }
+  .img-placeholder .bolt { font-size: 2.5rem; }
+
+  /* ── GRID CARTAS 3x3 ── */
+  .cartas-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 14px;
+  }
+
+  .carta-item {
+    background: #0f0f1e;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    user-select: none;
+  }
+  .carta-item:hover:not(.agotada) { border-color: var(--yellow); box-shadow: 0 0 10px #FFD70033; }
+  .carta-item.selected { border-color: var(--green); background: #001a0a; box-shadow: var(--hover-glow); box-shadow: 0 0 0 2px var(--green), 0 0 14px #00c85344; }
+  .carta-item.cart-highlight { border-color: var(--green-hi) !important; background: #002a0a !important; box-shadow: 0 0 16px #69f0ae55 !important; }
+  .carta-item.agotada { opacity: 0.5; cursor: not-allowed; }
+
+  .carta-codigo {
+    font-size: 0.65rem; font-weight: 800; letter-spacing: 0.5px;
+    color: var(--yellow); text-transform: uppercase; margin-bottom: 4px;
+  }
+  .carta-nombre { font-size: 0.78rem; font-weight: 700; color: var(--text); line-height: 1.2; margin-bottom: 2px; }
+  .carta-set    { font-size: 0.65rem; color: var(--muted); line-height: 1.2; margin-bottom: 4px; }
+  .carta-rareza {
+    display: inline-block;
+    font-size: 0.58rem; font-weight: 800;
+    padding: 2px 6px; border-radius: 8px;
+    margin-bottom: 4px;
+    text-transform: uppercase; letter-spacing: 0.3px;
+  }
+  .rareza-Normal         { background: #2a2a4a; color: #aaa; }
+  .rareza-Holo           { background: #3d1a6e; color: #cf9fff; }
+  .rareza-Reverse-Holo   { background: #1a3d6e; color: #9fd4ff; }
+  .rareza-Ultra-Rare     { background: #6e3d00; color: #ffc56e; }
+  .rareza-Cracked-Ice    { background: #004d6e; color: #69eeff; }
+
+  .carta-precio {
+    font-size: 0.9rem; font-weight: 800; color: var(--yellow); margin-top: 4px;
+  }
+  .carta-stock-badge {
+    position: absolute; top: 6px; right: 6px;
+    font-size: 0.6rem; font-weight: 700;
+    background: #1a3a1a; color: #69f0ae;
+    padding: 2px 6px; border-radius: 6px;
+  }
+  .agotado-badge {
+    position: absolute; top: 6px; right: 6px;
+    font-size: 0.62rem; font-weight: 800;
+    background: var(--red); color: #fff;
+    padding: 2px 8px; border-radius: 6px;
+    letter-spacing: 0.5px;
+  }
+  .check-overlay {
+    position: absolute; bottom: 6px; right: 6px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--green); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; font-weight: 800;
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .carta-item.selected .check-overlay { opacity: 1; }
+
+  /* ── CARRITO PANEL ── */
+  .cart-overlay {
+    position: fixed; inset: 0; background: #00000088;
+    z-index: 300; opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .cart-overlay.open { opacity: 1; pointer-events: all; }
+
+  .cart-panel {
+    position: fixed; right: 0; top: 0; bottom: 0;
+    width: min(460px, 100vw);
+    background: var(--dark);
+    border-left: 2px solid var(--yellow);
+    z-index: 301;
+    display: flex; flex-direction: column;
+    transform: translateX(100%); transition: transform 0.35s cubic-bezier(.4,0,.2,1);
+  }
+  .cart-panel.open { transform: translateX(0); }
+
+  .cart-top {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(90deg, #0f3460, var(--dark));
+  }
+  .cart-top h2 { font-family: 'Bangers', cursive; font-size: 1.4rem; color: var(--yellow); letter-spacing: 1px; }
+  .close-btn {
+    background: transparent; border: 1.5px solid var(--muted);
+    color: var(--muted); cursor: pointer;
+    width: 34px; height: 34px; border-radius: 50%;
+    font-size: 1rem; transition: all 0.2s;
+  }
+  .close-btn:hover { border-color: var(--red); color: var(--red); }
+
+  .cart-items { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .cart-empty { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 0.95rem; }
+  .cart-empty .empty-bolt { font-size: 3rem; display: block; margin-bottom: 12px; opacity: 0.4; }
+
+  .cart-item-card {
+    background: var(--card-bg);
+    border: 1.5px solid var(--border);
+    border-radius: 12px; padding: 12px 14px;
+    transition: border-color 0.2s;
+    cursor: default;
+  }
+  .cart-item-card.highlight { border-color: var(--green-hi); box-shadow: 0 0 12px #69f0ae44; }
+  .cart-item-card:hover { border-color: var(--green); }
+
+  .cart-item-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .cart-item-nombre { font-size: 0.85rem; font-weight: 700; color: var(--text); }
+  .cart-item-detalle { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+  .cart-item-remove {
+    background: transparent; border: none; color: var(--muted);
+    cursor: pointer; font-size: 1rem; padding: 2px 6px;
+    border-radius: 6px; transition: all 0.2s;
+  }
+  .cart-item-remove:hover { color: var(--red); background: #ff000022; }
+
+  .cart-item-bottom { display: flex; align-items: center; justify-content: space-between; }
+  .qty-control { display: flex; align-items: center; gap: 8px; }
+  .qty-btn {
+    background: var(--border); border: none; color: var(--text);
+    width: 28px; height: 28px; border-radius: 8px;
+    cursor: pointer; font-size: 1rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .qty-btn:hover { background: var(--yellow); color: var(--darker); }
+  .qty-num { font-weight: 800; font-size: 0.95rem; min-width: 24px; text-align: center; }
+  .cart-item-stock { font-size: 0.7rem; color: var(--muted); }
+  .cart-item-subtotal { font-size: 0.95rem; font-weight: 800; color: var(--yellow); }
+
+  /* ── FORMULARIO CLIENTE ── */
+  .cart-form {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--darker);
+  }
+  .cart-form h3 { font-size: 0.85rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+  .form-row { display: flex; gap: 10px; margin-bottom: 10px; }
+  .form-input {
+    flex: 1; background: var(--card-bg);
+    border: 1.5px solid var(--border); border-radius: 10px;
+    color: var(--text); font-family: 'Nunito', sans-serif;
+    font-size: 0.88rem; padding: 10px 14px;
+    outline: none; transition: border-color 0.2s;
+  }
+  .form-input:focus { border-color: var(--yellow); }
+  .form-input.error { border-color: var(--red); }
+  .form-input::placeholder { color: var(--muted); }
+
+  .cart-total {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 0 12px;
+    border-top: 1px solid var(--border); margin-top: 6px;
+  }
+  .cart-total-label { font-size: 0.9rem; color: var(--muted); font-weight: 700; }
+  .cart-total-valor { font-size: 1.3rem; font-weight: 800; color: var(--yellow); font-family: 'Bangers', cursive; letter-spacing: 1px; }
+
+  .btn-confirmar {
+    width: 100%;
+    background: linear-gradient(135deg, #FFD700, #FFA000);
+    border: none; cursor: pointer;
+    font-family: 'Bangers', cursive; font-size: 1.2rem; letter-spacing: 2px;
+    color: var(--darker); padding: 14px;
+    border-radius: 14px; transition: all 0.2s;
+    box-shadow: 0 4px 16px #FFD70055;
+  }
+  .btn-confirmar:hover { transform: translateY(-2px); box-shadow: 0 8px 24px #FFD70088; }
+  .btn-confirmar:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: 30px; left: 50%;
+    transform: translateX(-50%) translateY(120px);
+    background: var(--card-bg); border: 1.5px solid var(--yellow);
+    color: var(--text); padding: 12px 24px; border-radius: 14px;
+    font-weight: 700; font-size: 0.9rem;
+    z-index: 500; transition: transform 0.4s cubic-bezier(.4,0,.2,1);
+    box-shadow: 0 8px 30px #00000088; white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.error { border-color: var(--red); }
+  .toast.success { border-color: var(--green); }
+
+  /* ── MODAL ZOOM ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: #000000cc;
+    z-index: 400; display: none; align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-img-wrap {
+    position: relative; max-width: 90vw; max-height: 90vh;
+  }
+  .modal-img { max-width: 100%; max-height: 90vh; border-radius: 12px; box-shadow: 0 0 60px #00000099; }
+  .modal-close {
+    position: absolute; top: -16px; right: -16px;
+    background: var(--red); border: none; color: #fff;
+    width: 36px; height: 36px; border-radius: 50%;
+    font-size: 1.1rem; cursor: pointer; font-weight: 700;
+  }
+
+  /* ── LOADING ── */
+  .loading-overlay {
+    position: fixed; inset: 0; background: var(--darker);
+    z-index: 600; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px;
+  }
+  .loading-bolt { font-size: 4rem; animation: boltPulse 0.8s ease-in-out infinite alternate; }
+  @keyframes boltPulse { from { transform: scale(1); opacity: 1; } to { transform: scale(1.3); opacity: 0.6; } }
+  .loading-text { font-family: 'Bangers', cursive; font-size: 1.4rem; letter-spacing: 2px; color: var(--yellow); }
+
+  /* ── SUCCESS SCREEN ── */
+  .success-screen {
+    position: fixed; inset: 0; background: var(--darker);
+    z-index: 700; display: none;
+    align-items: center; justify-content: center; flex-direction: column;
+    gap: 20px; text-align: center; padding: 40px;
+  }
+  .success-screen.show { display: flex; }
+  .success-icon { font-size: 5rem; }
+  .success-screen h2 { font-family: 'Bangers', cursive; font-size: 2rem; color: var(--green); letter-spacing: 2px; }
+  .success-screen p { color: var(--muted); font-size: 1rem; max-width: 380px; }
+  .success-id { font-size: 1.1rem; font-weight: 800; color: var(--yellow); }
+  .btn-volver {
+    background: var(--yellow); color: var(--darker);
+    border: none; cursor: pointer; padding: 14px 36px;
+    font-family: 'Bangers', cursive; font-size: 1.2rem; letter-spacing: 2px;
+    border-radius: 14px; margin-top: 10px; transition: all 0.2s;
+  }
+  .btn-volver:hover { transform: scale(1.05); }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-bolt">⚡</div>
+  <div class="loading-text">Cargando colección...</div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="header-left">
+    <div class="logo-bolt">⚡</div>
+    <div class="header-title">
+      <h1>Pikachu Collection</h1>
+      <p>Paldea Games — Código PK</p>
+    </div>
+  </div>
+  <button class="cart-btn" onclick="abrirCarrito()">
+    🛒 Carrito
+    <span class="cart-count" id="cartCount">0</span>
+  </button>
+</header>
+
+<!-- NAVEGACIÓN -->
+<div class="nav-planas">
+  <button class="nav-arrow" id="btnPrev" onclick="navegarPar(-1)" disabled>◀</button>
+  <div id="navBtns"></div>
+  <button class="nav-arrow" id="btnNext" onclick="navegarPar(1)">▶</button>
+</div>
+
+<!-- MAIN -->
+<main id="mainContent"></main>
+
+<!-- CARRITO OVERLAY -->
+<div class="cart-overlay" id="cartOverlay" onclick="cerrarCarrito()"></div>
+
+<!-- CARRITO PANEL -->
+<div class="cart-panel" id="cartPanel">
+  <div class="cart-top">
+    <h2>🛒 Mi Carrito</h2>
+    <button class="close-btn" onclick="cerrarCarrito()">✕</button>
+  </div>
+  <div class="cart-items" id="cartItems">
+    <div class="cart-empty"><span class="empty-bolt">⚡</span>Tu carrito está vacío</div>
+  </div>
+  <div class="cart-form">
+    <h3>📋 Tus datos</h3>
+    <div class="form-row">
+      <input class="form-input" id="inputNombre" type="text" placeholder="Tu nombre" autocomplete="name">
+      <input class="form-input" id="inputInsta"  type="text" placeholder="@Instagram">
+    </div>
+    <div class="cart-total">
+      <span class="cart-total-label">TOTAL</span>
+      <span class="cart-total-valor" id="cartTotal">$0</span>
+    </div>
+    <button class="btn-confirmar" id="btnConfirmar" onclick="confirmarPedido()">⚡ CONFIRMAR PEDIDO</button>
+  </div>
+</div>
+
+<!-- MODAL ZOOM -->
+<div class="modal-overlay" id="modalOverlay" onclick="cerrarModal()">
+  <div class="modal-img-wrap" onclick="e=>e.stopPropagation()">
+    <button class="modal-close" onclick="cerrarModal()">✕</button>
+    <img class="modal-img" id="modalImg" src="" alt="Plana">
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- SUCCESS -->
+<div class="success-screen" id="successScreen">
+  <div class="success-icon">⚡✅</div>
+  <h2>¡Pedido Confirmado!</h2>
+  <p>Tu pedido fue recibido. Espera confirmación por Instagram.</p>
+  <p class="success-id" id="successId"></p>
+  <button class="btn-volver" onclick="volverTienda()">⚡ Seguir Comprando</button>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════
+//  CONFIGURACIÓN — actualiza APPS_SCRIPT_URL después
+//  de implementar el Apps Script en Google
+// ══════════════════════════════════════════════════
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyG_eYb0tCxNcUsVu_84EnDFiNtN4aiZ1vX30b7Bax7gRJ1DTvxg6CsNRfbHikqy-hs/exec";
+const GITHUB_RAW_BASE = "https://raw.githubusercontent.com/PaldeaGames/Pikachu/main/";
+
+// ══ Estado global ══
+let inventario = [];
+let carrito    = [];   // [{carta, cantidad}]
+let parActual  = 0;    // índice del par mostrado (0 = planas 1-2, 1 = planas 3-4, ...)
+let pares      = [];   // [[1,2],[3,4],[5,6],...]
+
+// ══ Utilidades ══
+const $ = id => document.getElementById(id);
+
+function formatCLP(n) {
+  return "$" + Number(n).toLocaleString("es-CL");
+}
+
+function showToast(msg, tipo = "") {
+  const t = $("toast");
+  t.textContent = msg;
+  t.className = "toast " + tipo + " show";
+  setTimeout(() => t.classList.remove("show"), 3200);
+}
+
+// ══ Cargar inventario desde Apps Script ══
+async function cargarInventario() {
+  try {
+    const res  = await fetch(APPS_SCRIPT_URL);
+    const data = await res.json();
+    inventario = data;
+  } catch (e) {
+    showToast("⚠️ Error cargando inventario. Recarga la página.", "error");
+    inventario = [];
+  }
+  construirPares();
+  renderNavegacion();
+  renderPar(0);
+  $("loadingOverlay").style.display = "none";
+}
+
+// ══ Construir pares de planas ══
+function construirPares() {
+  const planas = [...new Set(inventario.map(c => Number(c.plana)))].sort((a,b)=>a-b);
+  pares = [];
+  for (let i = 0; i < planas.length; i += 2) {
+    pares.push(planas.slice(i, i + 2));
+  }
+}
+
+// ══ Navegación ══
+function renderNavegacion() {
+  const cont = $("navBtns");
+  cont.innerHTML = "";
+  cont.style.display = "flex";
+  cont.style.gap = "8px";
+  pares.forEach((par, i) => {
+    const btn = document.createElement("button");
+    btn.className = "nav-btn" + (i === 0 ? " active" : "");
+    btn.textContent = "Planas " + par.join("-");
+    btn.onclick = () => renderPar(i);
+    cont.appendChild(btn);
+  });
+}
+
+function navegarPar(dir) {
+  const nuevo = parActual + dir;
+  if (nuevo >= 0 && nuevo < pares.length) renderPar(nuevo);
+}
+
+function renderPar(idx) {
+  parActual = idx;
+  // Actualizar botones nav
+  document.querySelectorAll(".nav-btn").forEach((b,i) => b.classList.toggle("active", i===idx));
+  $("btnPrev").disabled = idx === 0;
+  $("btnNext").disabled = idx === pares.length - 1;
+
+  const par    = pares[idx];
+  const main   = $("mainContent");
+  main.innerHTML = `<div class="par-planas" id="parPlanas"></div>`;
+  const cont = $("parPlanas");
+
+  par.forEach(numPlana => {
+    const cartas = inventario.filter(c => Number(c.plana) === numPlana);
+    cont.appendChild(crearPlanaSection(numPlana, cartas));
+  });
+}
+
+// ══ Crear sección de plana ══
+function crearPlanaSection(numPlana, cartas) {
+  const sec = document.createElement("div");
+  sec.className = "plana-section";
+  sec.id = "plana-" + numPlana;
+
+  const imgUrl = GITHUB_RAW_BASE + "plana" + numPlana + ".jpg";
+
+  sec.innerHTML = `
+    <div class="plana-header">
+      <span class="plana-title">⚡ Plana ${numPlana}</span>
+      <button class="btn-ver-plana" onclick="verPlana('${imgUrl}', ${numPlana})">🔍 Ver Plana ${numPlana}</button>
+    </div>
+    <div class="plana-img-wrap">
+      <img class="plana-img"
+        src="${imgUrl}"
+        alt="Plana ${numPlana}"
+        onclick="verPlana('${imgUrl}', ${numPlana})"
+        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="img-placeholder" style="display:none">
+        <span class="bolt">⚡</span>
+        <span>Plana ${numPlana}</span>
+        <span style="font-size:0.72rem">Imagen próximamente</span>
+      </div>
+    </div>
+    <div class="cartas-grid" id="grid-${numPlana}"></div>
+  `;
+
+  const grid = sec.querySelector(".cartas-grid");
+  cartas.forEach(carta => grid.appendChild(crearCartaItem(carta)));
+
+  return sec;
+}
+
+// ══ Crear carta individual ══
+function crearCartaItem(carta) {
+  const agotada  = Number(carta.stock) <= 0;
+  const enCarrito = carrito.find(x => x.carta.codigo === carta.codigo && Number(x.carta.plana) === Number(carta.plana));
+  const selected  = !!enCarrito;
+
+  const div = document.createElement("div");
+  const rarKey = (carta.rareza || "Normal").replace(/\s+/g, "-");
+  div.className = "carta-item" + (agotada ? " agotada" : "") + (selected ? " selected" : "");
+  div.id = "carta-" + carta.plana + "-" + carta.codigo;
+  div.dataset.plana  = carta.plana;
+  div.dataset.codigo = carta.codigo;
+
+  if (!agotada) div.onclick = () => toggleCarta(carta);
+
+  div.innerHTML = `
+    ${agotada
+      ? `<div class="agotado-badge">AGOTADO</div>`
+      : `<div class="carta-stock-badge">x${carta.stock}</div>`
+    }
+    <div class="carta-codigo">${carta.codigo}</div>
+    <div class="carta-nombre">${carta.pokemon}</div>
+    <div class="carta-set">${carta.set} ${carta.numero}</div>
+    <div class="carta-rareza rareza-${rarKey}">${carta.rareza}</div>
+    <div class="carta-precio">${formatCLP(carta.precio_clp)}</div>
+    <div class="check-overlay">✓</div>
+  `;
+
+  return div;
+}
+
+// ══ Toggle carta al carrito ══
+function toggleCarta(carta) {
+  const idx = carrito.findIndex(x => x.carta.codigo === carta.codigo && Number(x.carta.plana) === Number(carta.plana));
+  if (idx >= 0) {
+    carrito.splice(idx, 1);
+  } else {
+    carrito.push({ carta, cantidad: 1 });
+  }
+  actualizarCartaUI(carta);
+  renderCarrito();
+  actualizarCount();
+}
+
+function actualizarCartaUI(carta) {
+  const el = $("carta-" + carta.plana + "-" + carta.codigo);
+  if (!el) return;
+  const en = carrito.some(x => x.carta.codigo === carta.codigo && Number(x.carta.plana) === Number(carta.plana));
+  el.classList.toggle("selected", en);
+}
+
+// ══ Carrito render ══
+function renderCarrito() {
+  const cont = $("cartItems");
+  if (carrito.length === 0) {
+    cont.innerHTML = `<div class="cart-empty"><span class="empty-bolt">⚡</span>Tu carrito está vacío</div>`;
+    $("cartTotal").textContent = "$0";
+    return;
+  }
+
+  cont.innerHTML = "";
+  let total = 0;
+
+  carrito.forEach((item, i) => {
+    const c        = item.carta;
+    const subtotal = c.precio_clp * item.cantidad;
+    total         += subtotal;
+
+    const card = document.createElement("div");
+    card.className = "cart-item-card";
+    card.id = "cart-card-" + c.plana + "-" + c.codigo;
+    card.dataset.plana  = c.plana;
+    card.dataset.codigo = c.codigo;
+
+    card.addEventListener("mouseenter", () => highlightCarta(c.plana, c.codigo, true));
+    card.addEventListener("mouseleave", () => highlightCarta(c.plana, c.codigo, false));
+
+    card.innerHTML = `
+      <div class="cart-item-top">
+        <div>
+          <div class="cart-item-nombre">${c.pokemon} — ${c.rareza}</div>
+          <div class="cart-item-detalle">${c.set} ${c.numero} · ${c.codigo}</div>
+        </div>
+        <button class="cart-item-remove" onclick="quitarDelCarrito('${c.plana}','${c.codigo}')">✕</button>
+      </div>
+      <div class="cart-item-bottom">
+        <div class="qty-control">
+          <button class="qty-btn" onclick="cambiarCantidad('${c.plana}','${c.codigo}',-1)">−</button>
+          <span class="qty-num">${item.cantidad}</span>
+          <button class="qty-btn" onclick="cambiarCantidad('${c.plana}','${c.codigo}',1)">+</button>
+          <span class="cart-item-stock">/ ${c.stock}</span>
+        </div>
+        <span class="cart-item-subtotal">${formatCLP(subtotal)}</span>
+      </div>
+    `;
+    cont.appendChild(card);
+  });
+
+  $("cartTotal").textContent = formatCLP(total);
+}
+
+function highlightCarta(plana, codigo, on) {
+  const el = $("carta-" + plana + "-" + codigo);
+  if (el) el.classList.toggle("cart-highlight", on);
+  // También resaltar la plana
+  const sec = $("plana-" + plana);
+  if (sec) sec.classList.toggle("hover-highlight", on);
+}
+
+function quitarDelCarrito(plana, codigo) {
+  const idx = carrito.findIndex(x => String(x.carta.plana)===String(plana) && x.carta.codigo===codigo);
+  if (idx >= 0) {
+    const carta = carrito[idx].carta;
+    carrito.splice(idx, 1);
+    actualizarCartaUI(carta);
+    renderCarrito();
+    actualizarCount();
+  }
+}
+
+function cambiarCantidad(plana, codigo, delta) {
+  const item = carrito.find(x => String(x.carta.plana)===String(plana) && x.carta.codigo===codigo);
+  if (!item) return;
+  const nuevo = item.cantidad + delta;
+  if (nuevo < 1) { quitarDelCarrito(plana, codigo); return; }
+  if (nuevo > Number(item.carta.stock)) { showToast("⚠️ Sin stock suficiente", "error"); return; }
+  item.cantidad = nuevo;
+  renderCarrito();
+}
+
+function actualizarCount() {
+  const total = carrito.reduce((s, x) => s + x.cantidad, 0);
+  $("cartCount").textContent = total;
+}
+
+// ══ Abrir / Cerrar carrito ══
+function abrirCarrito() {
+  $("cartPanel").classList.add("open");
+  $("cartOverlay").classList.add("open");
+  renderCarrito();
+}
+function cerrarCarrito() {
+  $("cartPanel").classList.remove("open");
+  $("cartOverlay").classList.remove("open");
+}
+
+// ══ Modal zoom ══
+function verPlana(url, num) {
+  $("modalImg").src = url;
+  $("modalOverlay").classList.add("open");
+}
+function cerrarModal() { $("modalOverlay").classList.remove("open"); }
+
+// ══ Confirmar pedido ══
+async function confirmarPedido() {
+  const cliente   = $("inputNombre").value.trim();
+  const instagram = $("inputInsta").value.trim();
+
+  $("inputNombre").classList.remove("error");
+  $("inputInsta").classList.remove("error");
+
+  if (!cliente)   { $("inputNombre").classList.add("error"); showToast("⚠️ Ingresa tu nombre", "error"); return; }
+  if (!instagram) { $("inputInsta").classList.add("error");  showToast("⚠️ Ingresa tu @Instagram", "error"); return; }
+  if (carrito.length === 0) { showToast("⚠️ Tu carrito está vacío", "error"); return; }
+
+  const btn = $("btnConfirmar");
+  btn.disabled = true;
+  btn.textContent = "⚡ Enviando...";
+
+  const pedido = {
+    cliente,
+    instagram,
+    items: carrito.map(x => ({
+      plana:      x.carta.plana,
+      codigo:     x.carta.codigo,
+      pokemon:    x.carta.pokemon,
+      set:        x.carta.set,
+      numero:     x.carta.numero,
+      rareza:     x.carta.rareza,
+      precio_clp: x.carta.precio_clp,
+      cantidad:   x.cantidad
+    }))
+  };
+
+  try {
+    const encoded = encodeURIComponent(JSON.stringify(pedido));
+    const res  = await fetch(APPS_SCRIPT_URL + "?data=" + encoded);
+    const data = await res.json();
+
+    if (data.success) {
+      cerrarCarrito();
+      $("successId").textContent = "ID: " + data.id + " — Total: " + formatCLP(data.total);
+      $("successScreen").classList.add("show");
+      carrito = [];
+      actualizarCount();
+    } else {
+      throw new Error(data.error || "Error desconocido");
+    }
+  } catch (err) {
+    showToast("❌ Error al enviar: " + err.message, "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "⚡ CONFIRMAR PEDIDO";
+  }
+}
+
+function volverTienda() {
+  $("successScreen").classList.remove("show");
+  renderPar(parActual);
+}
+
+// ══ Init ══
+window.addEventListener("DOMContentLoaded", cargarInventario);
+</script>
+</body>
+</html>
