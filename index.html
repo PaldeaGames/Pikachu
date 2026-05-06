@@ -18,6 +18,15 @@
     --border:  #2a2a4a;
     --text:    #e8e8f0;
     --muted:   #8888aa;
+
+    /* ── Ajuste del overlay sobre la foto ──
+       Estos % definen dónde empiezan/terminan las cartas
+       dentro de la imagen de la carpeta.
+       Ajusta si las cartas no quedan bien alineadas. */
+    --ov-left:   6%;   /* margen izquierdo de la primera carta */
+    --ov-top:    4%;   /* margen superior de la primera carta  */
+    --ov-right:  6%;   /* margen derecho de la última carta    */
+    --ov-bottom: 4%;   /* margen inferior de la última carta   */
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { touch-action: pan-x pan-y; }
@@ -104,23 +113,75 @@
   }
   .btn-ver-plana:hover { background: var(--yellow); color: var(--darker); }
 
-  /* ── IMAGEN PLANA — grande con overlay preciso ── */
+  /* ── IMAGEN PLANA con overlay CSS ── */
   .plana-img-wrap {
     background: #0a0a18;
-    padding: 0;
     position: relative;
     cursor: pointer;
-    /* Aspect ratio de carpeta de cartas: ~3:4 vertical */
     width: 100%;
+    padding: 8px;
   }
-  /* Canvas que dibuja la imagen + overlay */
-  .plana-canvas {
+  .plana-img {
     display: block;
     width: 100%;
     height: auto;
-    /* altura generosa — el canvas se ajusta al aspecto real de la foto */
+    border-radius: 8px;
+    pointer-events: none;
   }
-  .plana-hint { text-align: center; font-size: 0.68rem; color: var(--muted); padding: 5px 0 8px; background: #0a0a18; }
+  .plana-img-error {
+    display: none;
+    height: 340px;
+    background: linear-gradient(135deg, #16213e, #0f3460);
+    border-radius: 10px;
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 8px; color: var(--muted);
+    font-size: 0.85rem; border: 2px dashed var(--border);
+  }
+  .plana-img-error .bolt { font-size: 2.5rem; }
+
+  /* ── OVERLAY GRID — posicionado sobre la imagen ── */
+  /* El área de cartas dentro de la foto ocupa aprox. el centro
+     Los % se pueden afinar con las variables --ov-* */
+  .overlay-grid {
+    position: absolute;
+    top:    calc(8px + var(--ov-top));
+    left:   calc(8px + var(--ov-left));
+    right:  calc(8px + var(--ov-right));
+    bottom: calc(8px + var(--ov-bottom));
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 2px;
+    pointer-events: none;
+  }
+  .ov-cell {
+    border-radius: 6px;
+    transition: all 0.22s;
+    position: relative;
+  }
+  /* Estado activo — carta seleccionada */
+  .ov-cell.active {
+    background: rgba(255, 215, 0, 0.18);
+    box-shadow: inset 0 0 0 2.5px #FFD700;
+  }
+  .ov-cell.active::after {
+    content: "✓";
+    position: absolute;
+    top: 5px; right: 6px;
+    width: 20px; height: 20px;
+    background: #FFD700;
+    color: #1a1a2e;
+    border-radius: 50%;
+    font-size: 0.72rem;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 20px;
+    text-align: center;
+  }
+
+  .plana-hint { text-align: center; font-size: 0.68rem; color: var(--muted); padding: 5px 0 8px; background: #0a0a18; border-radius: 0 0 4px 4px; }
 
   /* ── GRID CARTAS 3x3 ── */
   .cartas-grid {
@@ -137,7 +198,10 @@
   .carta-item.selected { border-color: var(--green); background: #001a0a; }
   .carta-item.cart-highlight { border-color: var(--green-hi) !important; box-shadow: 0 0 16px #69f0ae55 !important; }
   .carta-item.agotada { opacity: 0.45; cursor: not-allowed; }
+
+  /* Código oculto para el cliente */
   .carta-codigo { display: none; }
+
   .carta-nombre { font-size: 0.8rem; font-weight: 700; color: var(--text); line-height: 1.2; margin-bottom: 3px; }
   .carta-set    { font-size: 0.65rem; color: var(--muted); line-height: 1.2; margin-bottom: 5px; }
   .carta-rareza {
@@ -196,7 +260,7 @@
   .cart-empty { text-align: center; color: var(--muted); padding: 40px 20px; }
   .cart-empty .empty-bolt { font-size: 3rem; display: block; margin-bottom: 12px; opacity: 0.4; }
 
-  /* ── CART ITEM CARD con miniatura canvas ── */
+  /* ── CART ITEM con badge de rareza ── */
   .cart-item-card {
     background: var(--card-bg); border: 1.5px solid var(--border);
     border-radius: 12px; overflow: hidden; transition: border-color 0.2s;
@@ -204,15 +268,24 @@
   .cart-item-card.highlight { border-color: var(--green-hi); box-shadow: 0 0 12px #69f0ae44; }
   .cart-item-card:hover { border-color: var(--green); }
   .cart-item-inner { display: flex; align-items: stretch; }
+
+  /* Miniatura — color según rareza */
   .cart-thumb {
-    width: 70px; min-width: 70px;
-    overflow: hidden; position: relative; flex-shrink: 0;
-    background: #0a0a18;
+    width: 64px; min-width: 64px;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 4px;
+    flex-shrink: 0; padding: 8px 4px;
   }
-  .cart-thumb canvas {
-    display: block; width: 100%; height: 100%;
-    object-fit: cover;
-  }
+  .cart-thumb-icon { font-size: 1.6rem; line-height: 1; }
+  .cart-thumb-plana { font-size: 0.58rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* Colores de thumb por rareza */
+  .thumb-Normal        { background: #1a1a2e; }
+  .thumb-Holo          { background: #1e0a3c; }
+  .thumb-Reverse-Holo  { background: #0a1e3c; }
+  .thumb-Ultra-Rare    { background: #2a1400; }
+  .thumb-Cracked-Ice   { background: #001e2a; }
+
   .cart-item-body { flex: 1; padding: 10px 12px; min-width: 0; }
   .cart-item-top  { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
   .cart-item-nombre { font-size: 0.82rem; font-weight: 700; line-height: 1.2; }
@@ -247,13 +320,10 @@
   .form-input:focus { border-color: var(--yellow); }
   .form-input.error { border-color: var(--red); }
   .form-input::placeholder { color: var(--muted); }
-  /* Input instagram con @ prefijo */
-  .insta-wrapper {
-    flex: 1; position: relative; display: flex; align-items: center;
-  }
+  .insta-wrapper { flex: 1; position: relative; display: flex; align-items: center; }
   .insta-prefix {
     position: absolute; left: 12px; font-size: 0.95rem; font-weight: 800;
-    color: var(--yellow); pointer-events: none; z-index: 1; line-height: 1;
+    color: var(--yellow); pointer-events: none; z-index: 1;
   }
   .insta-input {
     width: 100%; background: var(--card-bg); border: 1.5px solid var(--border);
@@ -285,8 +355,8 @@
     transform: translateX(-50%) translateY(120px);
     background: var(--card-bg); border: 1.5px solid var(--yellow);
     color: var(--text); padding: 12px 24px; border-radius: 14px;
-    font-weight: 700; font-size: 0.88rem;
-    z-index: 500; transition: transform 0.4s cubic-bezier(.4,0,.2,1);
+    font-weight: 700; font-size: 0.88rem; z-index: 500;
+    transition: transform 0.4s cubic-bezier(.4,0,.2,1);
     box-shadow: 0 8px 30px #00000088; white-space: nowrap;
   }
   .toast.show { transform: translateX(-50%) translateY(0); }
@@ -431,9 +501,6 @@ let carrito    = [];
 let parActual  = 0;
 let pares      = [];
 
-// Cache imágenes para canvas
-const imgCache = {};
-
 const $    = id => document.getElementById(id);
 const fCLP = n  => "$" + Number(n).toLocaleString("es-CL");
 
@@ -443,135 +510,45 @@ function showToast(msg, tipo="") {
   setTimeout(() => t.classList.remove("show"), 3200);
 }
 
-// ══ Posición en grilla 3x3 a partir del código (PK23 → fila=1, col=2) ══
+// ══ Posición en grilla 3x3 desde código (PK23 → fila=1, col=2) ══
 function parsePos(codigo) {
   const digits = codigo.replace(/[^0-9]/g, "");
   const fila = parseInt(digits[digits.length - 2]) - 1;
   const col  = parseInt(digits[digits.length - 1]) - 1;
-  return { fila: isNaN(fila) ? 0 : fila, col: isNaN(col) ? 0 : col };
+  return { fila: isNaN(fila) ? 0 : Math.max(0, Math.min(2, fila)),
+           col:  isNaN(col)  ? 0 : Math.max(0, Math.min(2, col)) };
 }
 
 function getImgUrl(plana) {
   return "https://raw.githubusercontent.com/PaldeaGames/Pikachu/main/Plana%20(" + plana + ").jpg";
 }
 
-// ══ Cargar imagen en cache ══
-function cargarImagen(url) {
-  return new Promise(resolve => {
-    if (imgCache[url]) { resolve(imgCache[url]); return; }
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload  = () => { imgCache[url] = img; resolve(img); };
-    img.onerror = () => resolve(null);
-    img.src = url;
-  });
+// ══ Íconos por rareza para el carrito ══
+function rarezaIcon(rareza) {
+  const map = {
+    "Normal":       { icon: "⚡", bg: "thumb-Normal" },
+    "Holo":         { icon: "✨", bg: "thumb-Holo" },
+    "Reverse Holo": { icon: "🌟", bg: "thumb-Reverse-Holo" },
+    "Ultra Rare":   { icon: "💎", bg: "thumb-Ultra-Rare" },
+    "Cracked Ice Holo": { icon: "❄️", bg: "thumb-Cracked-Ice" }
+  };
+  return map[rareza] || { icon: "⚡", bg: "thumb-Normal" };
 }
 
-// ══ Redibujar canvas de la plana (imagen + overlays activos) ══
-async function redibujarPlana(numPlana) {
-  const canvas = $("canvas-plana-" + numPlana);
-  if (!canvas) return;
-
-  const url = getImgUrl(numPlana);
-  const img = await cargarImagen(url);
-  if (!img) return;
-
-  // Ajustar tamaño del canvas al aspecto real de la imagen
-  const w = canvas.offsetWidth || canvas.parentElement.offsetWidth || 400;
-  const h = Math.round(w * img.naturalHeight / img.naturalWidth);
-  canvas.width  = w;
-  canvas.height = h;
-  canvas.style.height = h + "px";
-
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(img, 0, 0, w, h);
-
-  // Detectar bounding box de las cartas en la foto
-  // Las cartas no ocupan el 100% — hay bordes negros de la carpeta
-  // Estimamos que las cartas empiezan al ~5% y terminan al ~95% en X e Y
-  const PAD_X = w  * 0.04;
-  const PAD_Y = h  * 0.03;
-  const areaW = w  - PAD_X * 2;
-  const areaH = h  - PAD_Y * 2;
-  const cW    = areaW / 3;  // ancho de una celda
-  const cH    = areaH / 3;  // alto de una celda
-
-  // Dibujar overlays para cartas seleccionadas de esta plana
-  const seleccionadas = carrito.filter(x => Number(x.carta.plana) === Number(numPlana));
-  for (const item of seleccionadas) {
+// ══ Actualizar celdas overlay de una plana ══
+function actualizarOverlay(numPlana) {
+  const grid = document.querySelector(`#plana-${numPlana} .overlay-grid`);
+  if (!grid) return;
+  // Limpiar
+  grid.querySelectorAll(".ov-cell").forEach(c => c.classList.remove("active"));
+  // Activar seleccionadas
+  carrito.forEach(item => {
+    if (Number(item.carta.plana) !== Number(numPlana)) return;
     const { fila, col } = parsePos(item.carta.codigo);
-    const x = PAD_X + col  * cW;
-    const y = PAD_Y + fila * cH;
-
-    // Fondo semitransparente dorado
-    ctx.fillStyle = "rgba(255, 215, 0, 0.18)";
-    ctx.beginPath();
-    ctx.roundRect(x + 3, y + 3, cW - 6, cH - 6, 8);
-    ctx.fill();
-
-    // Borde amarillo
-    ctx.strokeStyle = "#FFD700";
-    ctx.lineWidth   = 3;
-    ctx.beginPath();
-    ctx.roundRect(x + 3, y + 3, cW - 6, cH - 6, 8);
-    ctx.stroke();
-
-    // Badge ✓ esquina superior derecha
-    const bx = x + cW - 18;
-    const by = y + 10;
-    ctx.fillStyle = "#FFD700";
-    ctx.beginPath();
-    ctx.arc(bx, by, 11, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#1a1a2e";
-    ctx.font = "bold 13px Arial";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("✓", bx, by + 1);
-  }
-}
-
-// ══ Dibujar miniatura de carta en canvas del carrito ══
-async function dibujarMiniatura(canvas, plana, codigo) {
-  const url = getImgUrl(plana);
-  const img = await cargarImagen(url);
-  if (!img) return;
-
-  const { fila, col } = parsePos(codigo);
-
-  // Mismos márgenes que en redibujarPlana
-  const iw = img.naturalWidth;
-  const ih = img.naturalHeight;
-  const PAD_X = iw * 0.04;
-  const PAD_Y = ih * 0.03;
-  const areaW = iw - PAD_X * 2;
-  const areaH = ih - PAD_Y * 2;
-  const cW    = areaW / 3;
-  const cH    = areaH / 3;
-
-  // Coordenadas fuente del recorte (con pequeño margen interior)
-  const margin = 4;
-  const sx = PAD_X + col  * cW + margin;
-  const sy = PAD_Y + fila * cH + margin;
-  const sw = cW - margin * 2;
-  const sh = cH - margin * 2;
-
-  // Tamaño del canvas destino (proporcional a la carta)
-  const thumbW = 70;
-  const thumbH = Math.round(thumbW * (sh / sw));
-  canvas.width  = thumbW;
-  canvas.height = thumbH;
-  canvas.style.height = thumbH + "px";
-  canvas.parentElement.style.height = thumbH + "px";
-
-  const ctx = canvas.getContext("2d");
-
-  // Fondo oscuro
-  ctx.fillStyle = "#0a0a18";
-  ctx.fillRect(0, 0, thumbW, thumbH);
-
-  // Dibujar recorte de la carta
-  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, thumbW, thumbH);
+    const idx  = fila * 3 + col;
+    const cell = grid.children[idx];
+    if (cell) cell.classList.add("active");
+  });
 }
 
 // ══ Cargar inventario ══
@@ -620,10 +597,9 @@ function renderPar(idx) {
   $("btnNext").disabled = idx === pares.length - 1;
   const main = $("mainContent");
   main.innerHTML = `<div class="par-planas" id="parPlanas"></div>`;
-  const cont = $("parPlanas");
   pares[idx].forEach(numPlana => {
     const cartas = inventario.filter(c => Number(c.plana) === numPlana);
-    cont.appendChild(crearPlanaSection(numPlana, cartas));
+    $("parPlanas").appendChild(crearPlanaSection(numPlana, cartas));
   });
 }
 
@@ -635,13 +611,23 @@ function crearPlanaSection(numPlana, cartas) {
 
   const imgUrl = getImgUrl(numPlana);
 
+  // 9 celdas del overlay
+  const cells = Array(9).fill('<div class="ov-cell"></div>').join("");
+
   sec.innerHTML = `
     <div class="plana-header">
       <span class="plana-title">⚡ Plana ${numPlana}</span>
       <button class="btn-ver-plana" onclick="abrirModal('${imgUrl}')">🔍 Ver Plana ${numPlana}</button>
     </div>
     <div class="plana-img-wrap" ondblclick="abrirModal('${imgUrl}')">
-      <canvas class="plana-canvas" id="canvas-plana-${numPlana}"></canvas>
+      <img class="plana-img" src="${imgUrl}" alt="Plana ${numPlana}"
+        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="plana-img-error">
+        <span class="bolt">⚡</span>
+        <span>Plana ${numPlana}</span>
+        <span style="font-size:0.72rem">Imagen próximamente</span>
+      </div>
+      <div class="overlay-grid">${cells}</div>
     </div>
     <div class="plana-hint">Doble toque para ver en detalle</div>
     <div class="cartas-grid" id="grid-${numPlana}"></div>
@@ -650,8 +636,8 @@ function crearPlanaSection(numPlana, cartas) {
   const grid = sec.querySelector(".cartas-grid");
   cartas.forEach(carta => grid.appendChild(crearCartaItem(carta)));
 
-  // Dibujar canvas después de que esté en el DOM
-  setTimeout(() => redibujarPlana(numPlana), 60);
+  // Aplicar overlays ya seleccionados
+  setTimeout(() => actualizarOverlay(numPlana), 0);
 
   return sec;
 }
@@ -685,7 +671,7 @@ function toggleCarta(carta) {
   if (idx >= 0) carrito.splice(idx, 1);
   else carrito.push({ carta, cantidad: 1 });
   actualizarCartaUI(carta);
-  redibujarPlana(carta.plana);
+  actualizarOverlay(carta.plana);
   renderCarrito();
   actualizarCount();
 }
@@ -711,23 +697,26 @@ function renderCarrito() {
     const sub = c.precio_clp * item.cantidad;
     total += sub;
 
+    const { icon, bg } = rarezaIcon(c.rareza);
+    const rarKey = (c.rareza || "Normal").replace(/\s+/g, "-");
+
     const card = document.createElement("div");
     card.className = "cart-item-card";
     card.id = "cart-card-" + c.plana + "-" + c.codigo;
     card.addEventListener("mouseenter", () => highlightCarta(c.plana, c.codigo, true));
     card.addEventListener("mouseleave", () => highlightCarta(c.plana, c.codigo, false));
 
-    const canvasId = "thumb-" + c.plana + "-" + c.codigo;
-
     card.innerHTML = `
       <div class="cart-item-inner">
-        <div class="cart-thumb" style="height:88px">
-          <canvas id="${canvasId}" style="width:70px;height:88px"></canvas>
+        <div class="cart-thumb ${bg}">
+          <div class="cart-thumb-icon">${icon}</div>
+          <div class="cart-rareza rareza-${rarKey}" style="font-size:0.52rem;padding:2px 5px;border-radius:6px;font-weight:800;text-transform:uppercase;">${c.rareza}</div>
+          <div class="cart-thumb-plana">P${c.plana}</div>
         </div>
         <div class="cart-item-body">
           <div class="cart-item-top">
             <div>
-              <div class="cart-item-nombre">${c.pokemon} — ${c.rareza}</div>
+              <div class="cart-item-nombre">${c.pokemon}</div>
               <div class="cart-item-detalle">${c.set} ${c.numero}</div>
             </div>
             <button class="cart-item-remove" onclick="quitarDelCarrito('${c.plana}','${c.codigo}')">✕</button>
@@ -745,12 +734,6 @@ function renderCarrito() {
       </div>
     `;
     cont.appendChild(card);
-
-    // Dibujar miniatura recortada
-    setTimeout(() => {
-      const canvas = $(canvasId);
-      if (canvas) dibujarMiniatura(canvas, c.plana, c.codigo);
-    }, 80);
   });
   $("cartTotal").textContent = fCLP(total);
 }
@@ -768,7 +751,7 @@ function quitarDelCarrito(plana, codigo) {
     const carta = carrito[idx].carta;
     carrito.splice(idx, 1);
     actualizarCartaUI(carta);
-    redibujarPlana(plana);
+    actualizarOverlay(plana);
     renderCarrito(); actualizarCount();
   }
 }
@@ -861,11 +844,6 @@ document.addEventListener("DOMContentLoaded", () => {
   inner.addEventListener("touchend", e => {
     if (e.touches.length<2) lastDist=null;
     if (e.touches.length===0) isDragging=false;
-  });
-
-  // Redibujar canvases al redimensionar ventana
-  window.addEventListener("resize", () => {
-    pares[parActual]?.forEach(numPlana => redibujarPlana(numPlana));
   });
 
   cargarInventario();
