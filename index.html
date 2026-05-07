@@ -23,10 +23,10 @@
        Estos % definen dónde empiezan/terminan las cartas
        dentro de la imagen de la carpeta.
        Ajusta si las cartas no quedan bien alineadas. */
-    --ov-left:   7.5%;   /* margen izquierdo de la primera carta */
-    --ov-top:    4%;   /* margen superior de la primera carta  */
-    --ov-right:  2.2%;   /* margen derecho de la última carta    */
-    --ov-bottom: 4%;   /* margen inferior de la última carta   */
+    
+    
+    
+    
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { touch-action: pan-x pan-y; }
@@ -139,47 +139,7 @@
   }
   .plana-img-error .bolt { font-size: 2.5rem; }
 
-  /* ── OVERLAY GRID — posicionado sobre la imagen ── */
-  /* El área de cartas dentro de la foto ocupa aprox. el centro
-     Los % se pueden afinar con las variables --ov-* */
-  .overlay-grid {
-    position: absolute;
-    top:    calc(8px + var(--ov-top));
-    left:   calc(8px + var(--ov-left));
-    right:  calc(8px + var(--ov-right));
-    bottom: calc(8px + var(--ov-bottom));
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-    gap: 2px;
-    pointer-events: none;
-  }
-  .ov-cell {
-    border-radius: 6px;
-    transition: all 0.22s;
-    position: relative;
-  }
-  /* Estado activo — carta seleccionada */
-  .ov-cell.active {
-    background: rgba(255, 215, 0, 0.18);
-    box-shadow: inset 0 0 0 2.5px #FFD700;
-  }
-  .ov-cell.active::after {
-    content: "✓";
-    position: absolute;
-    top: 5px; right: 6px;
-    width: 20px; height: 20px;
-    background: #FFD700;
-    color: #1a1a2e;
-    border-radius: 50%;
-    font-size: 0.72rem;
-    font-weight: 900;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 20px;
-    text-align: center;
-  }
+  
 
   .plana-hint { text-align: center; font-size: 0.68rem; color: var(--muted); padding: 5px 0 8px; background: #0a0a18; border-radius: 0 0 4px 4px; }
 
@@ -535,21 +495,7 @@ function rarezaIcon(rareza) {
   return map[rareza] || { icon: "⚡", bg: "thumb-Normal" };
 }
 
-// ══ Actualizar celdas overlay de una plana ══
-function actualizarOverlay(numPlana) {
-  const grid = document.querySelector(`#plana-${numPlana} .overlay-grid`);
-  if (!grid) return;
-  // Limpiar
-  grid.querySelectorAll(".ov-cell").forEach(c => c.classList.remove("active"));
-  // Activar seleccionadas
-  carrito.forEach(item => {
-    if (Number(item.carta.plana) !== Number(numPlana)) return;
-    const { fila, col } = parsePos(item.carta.codigo);
-    const idx  = fila * 3 + col;
-    const cell = grid.children[idx];
-    if (cell) cell.classList.add("active");
-  });
-}
+
 
 // ══ Cargar inventario ══
 async function cargarInventario() {
@@ -612,7 +558,7 @@ function crearPlanaSection(numPlana, cartas) {
   const imgUrl = getImgUrl(numPlana);
 
   // 9 celdas del overlay
-  const cells = Array(9).fill('<div class="ov-cell"></div>').join("");
+  const cells = "";
 
   sec.innerHTML = `
     <div class="plana-header">
@@ -627,7 +573,6 @@ function crearPlanaSection(numPlana, cartas) {
         <span>Plana ${numPlana}</span>
         <span style="font-size:0.72rem">Imagen próximamente</span>
       </div>
-      <div class="overlay-grid">${cells}</div>
     </div>
     <div class="plana-hint">Doble toque para ver en detalle</div>
     <div class="cartas-grid" id="grid-${numPlana}"></div>
@@ -636,8 +581,6 @@ function crearPlanaSection(numPlana, cartas) {
   const grid = sec.querySelector(".cartas-grid");
   cartas.forEach(carta => grid.appendChild(crearCartaItem(carta)));
 
-  // Aplicar overlays ya seleccionados
-  setTimeout(() => actualizarOverlay(numPlana), 0);
 
   return sec;
 }
@@ -671,7 +614,6 @@ function toggleCarta(carta) {
   if (idx >= 0) carrito.splice(idx, 1);
   else carrito.push({ carta, cantidad: 1 });
   actualizarCartaUI(carta);
-  actualizarOverlay(carta.plana);
   renderCarrito();
   actualizarCount();
 }
@@ -751,8 +693,7 @@ function quitarDelCarrito(plana, codigo) {
     const carta = carrito[idx].carta;
     carrito.splice(idx, 1);
     actualizarCartaUI(carta);
-    actualizarOverlay(plana);
-    renderCarrito(); actualizarCount();
+      renderCarrito(); actualizarCount();
   }
 }
 
