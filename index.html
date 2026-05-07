@@ -155,6 +155,11 @@
   .carta-item.selected { border-color: var(--green); background: #001a0a; }
   .carta-item.cart-highlight { border-color: var(--green-hi) !important; box-shadow: 0 0 16px #69f0ae55 !important; }
   .carta-item.agotada { opacity: 0.45; cursor: not-allowed; }
+  .carta-item.vacia { 
+    background: #0a0a14; border: 2px dashed #1a1a2a;
+    opacity: 0.25; cursor: default; pointer-events: none;
+  }
+
 
   /* Código oculto para el cliente */
   .carta-codigo { display: none; }
@@ -450,7 +455,7 @@
 
 <script>
 // ══════════════════════════════════════════════════
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbymkq81nv85-kf3QIbjnkPfYyQwN6PZIn9r8GsJ7iVMYbgL5CtvLCADHc9c5CCXtMCl/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx87sF-YlS1wxlSFnQua7t--0Y_9N8Sfm4WIqg5Ozza3i8JnjtF4NQi071F-kGOmN0r/exec";
 // ══════════════════════════════════════════════════
 
 let inventario = [];
@@ -583,14 +588,20 @@ function crearPlanaSection(numPlana, cartas) {
 
 // ══ Carta item ══
 function crearCartaItem(carta) {
-  const agotada  = Number(carta.stock) <= 0;
-  const selected = carrito.some(x => x.carta.codigo === carta.codigo && Number(x.carta.plana) === Number(carta.plana));
+  const vacia    = carta.estado === "Vacío" || carta.pokemon === "Vacío";
+  const agotada  = !vacia && Number(carta.stock) <= 0;
+  const selected = !vacia && carrito.some(x => x.carta.codigo === carta.codigo && Number(x.carta.plana) === Number(carta.plana));
   const rarKey   = (carta.rareza || "Normal").replace(/\s+/g, "-");
 
   const div = document.createElement("div");
-  div.className = "carta-item" + (agotada?" agotada":"") + (selected?" selected":"");
+  div.className = "carta-item" + (vacia?" vacia":"") + (agotada?" agotada":"") + (selected?" selected":"");
   div.id = "carta-" + carta.plana + "-" + carta.codigo;
-  if (!agotada) div.onclick = () => toggleCarta(carta);
+  if (!agotada && !vacia) div.onclick = () => toggleCarta(carta);
+
+  if (vacia) {
+    div.innerHTML = "";
+    return div;
+  }
 
   div.innerHTML = `
     ${agotada ? `<div class="agotado-badge">AGOTADO</div>` : ""}
