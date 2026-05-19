@@ -813,11 +813,17 @@ async function confirmarPedido() {
   };
 
   try {
-    const res  = await fetch(APPS_SCRIPT_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify(pedido)
-    });
+    // Pedido comprimido: solo códigos, planas y cantidades para minimizar URL
+    const pedidoComprimido = {
+      cliente:   pedido.cliente,
+      instagram: pedido.instagram,
+      items: pedido.items.map(x => ({
+        plana:    x.plana,
+        codigo:   x.codigo,
+        cantidad: x.cantidad
+      }))
+    };
+    const res  = await fetch(APPS_SCRIPT_URL + "?carpeta=PK&data=" + encodeURIComponent(JSON.stringify(pedidoComprimido)));
     const data = await res.json();
     if (data.success) {
       cerrarCarrito();
