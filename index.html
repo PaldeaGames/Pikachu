@@ -820,21 +820,23 @@ async function confirmarPedido() {
 
   const totalCarrito = carrito.reduce((s,x) => s + (x.carta.precio_clp * x.cantidad), 0);
 
+  // ID de sesión único generado en el cliente — mismo para todos los chunks
+  const sessionId = "SID-" + Date.now() + "-" + Math.random().toString(36).slice(2,7);
+
   try {
     for (let c = 0; c < chunks.length; c++) {
       const parte = {
         cliente,
         instagram,
+        session_id:   sessionId,
         chunk:        c,
         total_chunks: chunks.length,
         items:        chunks[c]
       };
       const url = APPS_SCRIPT_URL + "?carpeta=" + CARPETA + "&data=" +
                   encodeURIComponent(JSON.stringify(parte));
-      // no-cors evita error CORS — el pedido llega igual al servidor
       await fetch(url, { mode: "no-cors" });
-      // Pequeña pausa entre chunks para no saturar
-      if (c < chunks.length - 1) await new Promise(r => setTimeout(r, 1000));
+      if (c < chunks.length - 1) await new Promise(r => setTimeout(r, 800));
     }
 
     cerrarCarrito();
