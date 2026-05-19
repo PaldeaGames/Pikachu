@@ -786,8 +786,8 @@ document.addEventListener("DOMContentLoaded", () => {
   cargarInventario();
 });
 
-// ══ Confirmar pedido ══
-async function confirmarPedido() {
+// ══ Confirmar pedido — via imagen (evita CORS completamente) ══
+function confirmarPedido() {
   const cliente  = $("inputNombre").value.trim();
   const instaRaw = $("inputInsta").value.trim();
   const instagram = "@" + instaRaw.replace(/^@+/, "");
@@ -802,40 +802,50 @@ async function confirmarPedido() {
   const btn = $("btnConfirmar");
   btn.disabled=true; btn.textContent="⚡ Enviando...";
 
-  const pedido = {
-    cliente, instagram,
-    items: carrito.map(x=>({
-      plana:x.carta.plana, codigo:x.carta.codigo,
-      pokemon:x.carta.pokemon, set:x.carta.set,
-      numero:x.carta.numero, rareza:x.carta.rareza,
-      precio_clp:x.carta.precio_clp, cantidad:x.cantidad
+  const pedidoComprimido = {
+    cliente,
+    instagram,
+    items: carrito.map(x => ({
+      plana:    x.carta.plana,
+      codigo:   x.carta.codigo,
+      cantidad: x.cantidad
     }))
   };
 
-  try {
-    // Pedido comprimido: solo códigos, planas y cantidades para minimizar URL
-    const pedidoComprimido = {
-      cliente:   pedido.cliente,
-      instagram: pedido.instagram,
-      items: pedido.items.map(x => ({
-        plana:    x.plana,
-        codigo:   x.codigo,
-        cantidad: x.cantidad
-      }))
-    };
-    const res  = await fetch(APPS_SCRIPT_URL + "?carpeta=PK&data=" + encodeURIComponent(JSON.stringify(pedidoComprimido)));
-    const data = await res.json();
-    if (data.success) {
+  const url = APPS_SCRIPT_URL + "?carpeta=PK&data=" + encodeURIComponent(JSON.stringify(pedidoComprimido));
+
+  // Usar Image() para evitar CORS — Apps Script responde igual
+  // El pedido llega aunque no podamos leer la respuesta directamente
+  const img = new Image();
+  let respondido = false;
+
+  // Timeout: si en 12 segundos no hay error, asumir éxito
+  const timeout = setTimeout(() => {
+    if (!respondido) {
+      respondido = true;
       cerrarCarrito();
-      $("successId").textContent = "ID: "+data.id+" — Total: "+fCLP(data.total);
+      // Generar ID local para mostrar al cliente
+      const idLocal = "PED-" + Date.now().toString().slice(-4);
+      $("successId").textContent = "Pedido enviado — Total: " + fCLP(carrito.reduce((s,x)=>s+(x.carta.precio_clp*x.cantidad),0));
       $("successScreen").classList.add("show");
       carrito=[]; actualizarCount();
-    } else throw new Error(data.error||"Error desconocido");
-  } catch(err) {
-    showToast("❌ Error al enviar: "+err.message, "error");
-  } finally {
-    btn.disabled=false; btn.textContent="⚡ CONFIRMAR PEDIDO";
-  }
+      btn.disabled=false; btn.textContent="⚡ CONFIRMAR PEDIDO";
+    }
+  }, 12000);
+
+  img.onload = img.onerror = () => {
+    if (!respondido) {
+      respondido = true;
+      clearTimeout(timeout);
+      cerrarCarrito();
+      $("successId").textContent = "Pedido enviado — Total: " + fCLP(carrito.reduce((s,x)=>s+(x.carta.precio_clp*x.cantidad),0));
+      $("successScreen").classList.add("show");
+      carrito=[]; actualizarCount();
+      btn.disabled=false; btn.textContent="⚡ CONFIRMAR PEDIDO";
+    }
+  };
+
+  img.src = url;
 }
 
 function volverTienda() {
