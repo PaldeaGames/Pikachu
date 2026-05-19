@@ -784,7 +784,7 @@ document.addEventListener("DOMContentLoaded", () => {
   cargarInventario();
 });
 
-// ══ Confirmar pedido — chunks + no-cors (sin límite de tamaño) ══
+// ══ Confirmar pedido ══
 async function confirmarPedido() {
   const cliente  = $("inputNombre").value.trim();
   const instaRaw = $("inputInsta").value.trim();
@@ -795,11 +795,15 @@ async function confirmarPedido() {
 
   if (!cliente)  { $("inputNombre").classList.add("error"); showToast("⚠️ Ingresa tu nombre", "error"); return; }
   if (!instaRaw) { $("inputInsta").classList.add("error");  showToast("⚠️ Ingresa tu usuario de Instagram", "error"); return; }
-  if (carrito.length===0) { showToast("⚠️ Tu carrito está vacío", "error"); return; }
+  if (carrito.length === 0) { showToast("⚠️ Tu carrito está vacío", "error"); return; }
 
   const btn = $("btnConfirmar");
-  btn.disabled=true; btn.textContent="⚡ Enviando...";
+  btn.disabled = true; btn.textContent = "⚡ Enviando...";
 
+  // Calcular total
+  const totalCarrito = carrito.reduce((s, x) => s + (x.carta.precio_clp * x.cantidad), 0);
+
+  // Construir items completos
   const items = carrito.map(x => ({
     plana:      x.carta.plana,
     codigo:     x.carta.codigo,
@@ -811,45 +815,53 @@ async function confirmarPedido() {
     cantidad:   x.cantidad
   }));
 
-  // Dividir en chunks de 10 para no superar límite de URL
-  const CHUNK_SIZE = 10;
+  // El HTML genera el número de pedido — se envía igual en TODOS los chunks
+  // Formato: usa timestamp para que sea único
+  const pedidoNum = String(Date.now()).slice(-6);
+  const pedidoId  = "SID-" + pedidoNum;
+
+  // Dividir en grupos de 8 items
+  const CHUNK = 8;
   const chunks = [];
-  for (let i = 0; i < items.length; i += CHUNK_SIZE) {
-    chunks.push(items.slice(i, i + CHUNK_SIZE));
+  for (let i = 0; i < items.length; i += CHUNK) {
+    chunks.push(items.slice(i, i + CHUNK));
   }
-
-  const totalCarrito = carrito.reduce((s,x) => s + (x.carta.precio_clp * x.cantidad), 0);
-
-  // ID de sesión único generado en el cliente — mismo para todos los chunks
-  const sessionId = "SID-" + Date.now() + "-" + Math.random().toString(36).slice(2,7);
 
   try {
     for (let c = 0; c < chunks.length; c++) {
       const parte = {
+        pedido_id:    pedidoId,       // mismo ID en todos los chunks
         cliente,
         instagram,
-        session_id:   sessionId,
         chunk:        c,
         total_chunks: chunks.length,
+        total:        totalCarrito,   // total real enviado desde el cliente
         items:        chunks[c]
       };
-      const url = APPS_SCRIPT_URL + "?carpeta=" + CARPETA + "&data=" +
-                  encodeURIComponent(JSON.stringify(parte));
+
+      const url = APPS_SCRIPT_URL + "?carpeta=" + CARPETA +
+                  "&data=" + encodeURIComponent(JSON.stringify(parte));
+
+      // Esperar 1.2s entre chunks para que el servidor los procese en orden
+      if (c > 0) await new Promise(r => setTimeout(r, 1200));
       await fetch(url, { mode: "no-cors" });
-      if (c < chunks.length - 1) await new Promise(r => setTimeout(r, 800));
     }
+
+    // Esperar un poco más para que el último chunk se procese
+    await new Promise(r => setTimeout(r, 1500));
 
     cerrarCarrito();
     $("successId").textContent = "Pedido enviado — Total: " + fCLP(totalCarrito);
     $("successScreen").classList.add("show");
-    carrito=[]; actualizarCount();
+    carrito = []; actualizarCount();
 
   } catch(err) {
     showToast("❌ Error: " + err.message, "error");
   } finally {
-    btn.disabled=false; btn.textContent="⚡ CONFIRMAR PEDIDO";
+    btn.disabled = false; btn.textContent = "⚡ CONFIRMAR PEDIDO";
   }
 }
+
 
 function volverTienda() {
   $("successScreen").classList.remove("show");
