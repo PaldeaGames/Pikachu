@@ -303,6 +303,23 @@
   .btn-confirmar:hover { transform: translateY(-2px); }
   .btn-confirmar:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
+  /* ── BARRA DE PROGRESO ── */
+  #progressWrap {
+    display: none;
+    width: 100%; height: 6px;
+    background: #1a1a2e;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  #progressBar {
+    height: 100%;
+    background: linear-gradient(90deg, #FFD700, #FFA000);
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.4s ease;
+  }
+
   /* ── TOAST ── */
   .toast {
     position: fixed; bottom: 30px; left: 50%;
@@ -421,6 +438,7 @@
       <span class="cart-total-label">TOTAL</span>
       <span class="cart-total-valor" id="cartTotal">$0</span>
     </div>
+    <div id="progressWrap"><div id="progressBar"></div></div>
     <button class="btn-confirmar" id="btnConfirmar" onclick="confirmarPedido()">⚡ CONFIRMAR PEDIDO</button>
   </div>
 </div>
@@ -798,68 +816,80 @@ async function confirmarPedido() {
   if (carrito.length === 0) { showToast("⚠️ Tu carrito está vacío", "error"); return; }
 
   const btn = $("btnConfirmar");
-  btn.disabled = true; btn.textContent = "⚡ Enviando...";
+  btn.disabled = true;
+  btn.textContent = "⚡ Enviando...";
 
-  // Calcular total
+  // Mostrar barra de progreso
+  mostrarProgreso(0);
+
   const totalCarrito = carrito.reduce((s, x) => s + (x.carta.precio_clp * x.cantidad), 0);
 
-  // Construir items completos
-  const items = carrito.map(x => ({
-    plana:      x.carta.plana,
-    codigo:     x.carta.codigo,
-    pokemon:    x.carta.pokemon,
-    set:        x.carta.set,
-    numero:     x.carta.numero,
-    rareza:     x.carta.rareza,
-    precio_clp: x.carta.precio_clp,
-    cantidad:   x.cantidad
-  }));
+  // Pedido COMPRIMIDO: solo plana, codigo, cantidad por carta
+  // El Apps Script busca el resto desde el inventario del Sheet
+  const pedido = {
+    cliente,
+    instagram,
+    total: totalCarrito,
+    items: carrito.map(x => ({
+      p: String(x.carta.plana),    // plana
+      c: x.carta.codigo,           // codigo
+      q: x.cantidad                // cantidad
+    }))
+  };
 
-  // El HTML genera el número de pedido — se envía igual en TODOS los chunks
-  // Formato: usa timestamp para que sea único
-  const pedidoNum = String(Date.now()).slice(-6);
-  const pedidoId  = "SID-" + pedidoNum;
+  mostrarProgreso(30);
 
-  // Dividir en grupos de 8 items
-  const CHUNK = 8;
-  const chunks = [];
-  for (let i = 0; i < items.length; i += CHUNK) {
-    chunks.push(items.slice(i, i + CHUNK));
-  }
+  const url = APPS_SCRIPT_URL + "?carpeta=" + CARPETA +
+              "&data=" + encodeURIComponent(JSON.stringify(pedido));
 
-  try {
-    for (let c = 0; c < chunks.length; c++) {
-      const parte = {
-        pedido_id:    pedidoId,       // mismo ID en todos los chunks
-        cliente,
-        instagram,
-        chunk:        c,
-        total_chunks: chunks.length,
-        total:        totalCarrito,   // total real enviado desde el cliente
-        items:        chunks[c]
-      };
+  mostrarProgreso(60);
 
-      const url = APPS_SCRIPT_URL + "?carpeta=" + CARPETA +
-                  "&data=" + encodeURIComponent(JSON.stringify(parte));
+  // Usar Image() — nunca falla por CORS, funciona en todos los navegadores
+  const img = new Image();
+  let enviado = false;
 
-      // Esperar 1.2s entre chunks para que el servidor los procese en orden
-      if (c > 0) await new Promise(r => setTimeout(r, 1200));
-      await fetch(url, { mode: "no-cors" });
+  const timeout = setTimeout(() => {
+    if (!enviado) {
+      enviado = true;
+      mostrarProgreso(100);
+      setTimeout(() => ocultarProgreso(), 500);
+      cerrarCarrito();
+      $("successId").textContent = "Pedido enviado — Total: " + fCLP(totalCarrito);
+      $("successScreen").classList.add("show");
+      carrito = []; actualizarCount();
+      btn.disabled = false; btn.textContent = "⚡ CONFIRMAR PEDIDO";
     }
+  }, 15000);
 
-    // Esperar un poco más para que el último chunk se procese
-    await new Promise(r => setTimeout(r, 1500));
+  img.onload = img.onerror = () => {
+    if (!enviado) {
+      enviado = true;
+      clearTimeout(timeout);
+      mostrarProgreso(100);
+      setTimeout(() => ocultarProgreso(), 500);
+      cerrarCarrito();
+      $("successId").textContent = "Pedido enviado — Total: " + fCLP(totalCarrito);
+      $("successScreen").classList.add("show");
+      carrito = []; actualizarCount();
+      btn.disabled = false; btn.textContent = "⚡ CONFIRMAR PEDIDO";
+    }
+  };
 
-    cerrarCarrito();
-    $("successId").textContent = "Pedido enviado — Total: " + fCLP(totalCarrito);
-    $("successScreen").classList.add("show");
-    carrito = []; actualizarCount();
+  mostrarProgreso(80);
+  img.src = url;
+}
 
-  } catch(err) {
-    showToast("❌ Error: " + err.message, "error");
-  } finally {
-    btn.disabled = false; btn.textContent = "⚡ CONFIRMAR PEDIDO";
-  }
+// Barra de progreso
+function mostrarProgreso(pct) {
+  var bar = $("progressBar");
+  var wrap = $("progressWrap");
+  if (!bar || !wrap) return;
+  wrap.style.display = "block";
+  bar.style.width = pct + "%";
+}
+function ocultarProgreso() {
+  var wrap = $("progressWrap");
+  if (wrap) wrap.style.display = "none";
 }
 
 
