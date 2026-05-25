@@ -231,26 +231,7 @@
   }
   .cart-item-card.highlight { border-color: var(--green-hi); box-shadow: 0 0 12px #69f0ae44; }
   .cart-item-card:hover { border-color: var(--green); }
-  .cart-item-inner { display: flex; align-items: stretch; }
-
-  /* Miniatura — color según rareza */
-  .cart-thumb {
-    width: 64px; min-width: 64px;
-    display: flex; align-items: center; justify-content: center;
-    flex-direction: column; gap: 4px;
-    flex-shrink: 0; padding: 8px 4px;
-  }
-  .cart-thumb-icon { font-size: 1.6rem; line-height: 1; }
-  .cart-thumb-plana { font-size: 0.58rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
-
-  /* Colores de thumb por rareza */
-  .thumb-Normal        { background: #1a1a2e; }
-  .thumb-Holo          { background: #1e0a3c; }
-  .thumb-Reverse-Holo  { background: #0a1e3c; }
-  .thumb-Ultra-Rare    { background: #2a1400; }
-  .thumb-Cracked-Ice   { background: #001e2a; }
-
-  .cart-item-body { flex: 1; padding: 10px 12px; min-width: 0; }
+  .cart-item-body { padding: 12px 14px; }
   .cart-item-top  { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
   .cart-item-nombre { font-size: 0.82rem; font-weight: 700; line-height: 1.2; }
   .cart-item-detalle { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
@@ -500,18 +481,6 @@ function getImgUrl(plana) {
   return "https://raw.githubusercontent.com/PaldeaGames/Pikachu/main/Plana%20(" + plana + ").jpg";
 }
 
-// ══ Íconos por rareza para el carrito ══
-function rarezaIcon(rareza) {
-  const map = {
-    "Normal":       { icon: "⚡", bg: "thumb-Normal" },
-    "Holo":         { icon: "✨", bg: "thumb-Holo" },
-    "Reverse Holo": { icon: "🌟", bg: "thumb-Reverse-Holo" },
-    "Ultra Rare":   { icon: "💎", bg: "thumb-Ultra-Rare" },
-    "Cracked Ice Holo": { icon: "❄️", bg: "thumb-Cracked-Ice" }
-  };
-  return map[rareza] || { icon: "⚡", bg: "thumb-Normal" };
-}
-
 
 // ══ Cargar inventario ══
 async function cargarInventario() {
@@ -664,7 +633,6 @@ function renderCarrito() {
     const sub = c.precio_clp * item.cantidad;
     total += sub;
 
-    const { icon, bg } = rarezaIcon(c.rareza);
     const rarKey = (c.rareza || "Normal").replace(/\s+/g, "-");
 
     const card = document.createElement("div");
@@ -674,29 +642,26 @@ function renderCarrito() {
     card.addEventListener("mouseleave", () => highlightCarta(c.plana, c.codigo, false));
 
     card.innerHTML = `
-      <div class="cart-item-inner">
-        <div class="cart-thumb ${bg}">
-          <div class="cart-thumb-icon">${icon}</div>
-          <div class="cart-rareza rareza-${rarKey}" style="font-size:0.52rem;padding:2px 5px;border-radius:6px;font-weight:800;text-transform:uppercase;">${c.rareza}</div>
-          <div class="cart-thumb-plana">P${c.plana}</div>
+      <div class="cart-item-body">
+        <div class="cart-item-top">
+          <div style="flex:1;min-width:0">
+            <div class="cart-item-nombre">${c.pokemon}</div>
+            <div class="cart-item-detalle">${c.set} · ${c.numero}</div>
+            <div class="cart-item-detalle" style="margin-top:2px">
+              <span class="carta-rareza rareza-${rarKey}" style="font-size:0.55rem;padding:1px 6px">${c.rareza}</span>
+              <span style="color:var(--muted);font-size:0.65rem;margin-left:4px">Plana ${c.plana}</span>
+            </div>
+          </div>
+          <button class="cart-item-remove" onclick="quitarDelCarrito('${c.plana}','${c.codigo}')">✕</button>
         </div>
-        <div class="cart-item-body">
-          <div class="cart-item-top">
-            <div>
-              <div class="cart-item-nombre">${c.pokemon}</div>
-              <div class="cart-item-detalle">${c.set} ${c.numero}</div>
-            </div>
-            <button class="cart-item-remove" onclick="quitarDelCarrito('${c.plana}','${c.codigo}')">✕</button>
+        <div class="cart-item-bottom" style="margin-top:8px">
+          <div class="qty-control">
+            <button class="qty-btn" onclick="cambiarCantidad('${c.plana}','${c.codigo}',-1)">−</button>
+            <span class="qty-num">${item.cantidad}</span>
+            <button class="qty-btn" onclick="cambiarCantidad('${c.plana}','${c.codigo}',1)">+</button>
+            <span class="cart-item-stock">/ ${c.stock}</span>
           </div>
-          <div class="cart-item-bottom">
-            <div class="qty-control">
-              <button class="qty-btn" onclick="cambiarCantidad('${c.plana}','${c.codigo}',-1)">−</button>
-              <span class="qty-num">${item.cantidad}</span>
-              <button class="qty-btn" onclick="cambiarCantidad('${c.plana}','${c.codigo}',1)">+</button>
-              <span class="cart-item-stock">/ ${c.stock}</span>
-            </div>
-            <span class="cart-item-subtotal">${fCLP(sub)}</span>
-          </div>
+          <span class="cart-item-subtotal">${fCLP(sub)}</span>
         </div>
       </div>
     `;
