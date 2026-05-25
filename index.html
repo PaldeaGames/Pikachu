@@ -859,17 +859,22 @@ async function confirmarPedido() {
   wrap.style.display = "block";
   bar.style.width = "15%";
 
-  const itemsComprimidos = carrito.map(x => ({
-    p: x.carta.plana,
-    c: x.carta.codigo,
-    q: x.cantidad
-  }));
-
+  // Enviar campos completos con nombres cortos para minimizar URL
+  // El Apps Script los recibe directo sin necesitar buscar en el inventario
   const pedido = {
     carpeta:   CARPETA,
     cliente,
     instagram,
-    items: itemsComprimidos
+    items: carrito.map(x => ({
+      p:  x.carta.plana,
+      c:  x.carta.codigo,
+      q:  x.cantidad,
+      pk: x.carta.pokemon,
+      s:  x.carta.set,
+      n:  x.carta.numero,
+      r:  x.carta.rareza,
+      cl: x.carta.precio_clp
+    }))
   };
 
   bar.style.width = "40%";
