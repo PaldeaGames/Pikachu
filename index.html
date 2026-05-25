@@ -214,6 +214,7 @@
     padding: 18px 20px; border-bottom: 1px solid var(--border);
     display: flex; align-items: center; justify-content: space-between;
     background: linear-gradient(90deg, #0f3460, var(--dark));
+    flex-shrink: 0;
   }
   .cart-top h2 { font-family: 'Bangers', cursive; font-size: 1.4rem; color: var(--yellow); letter-spacing: 1px; }
   .close-btn {
@@ -221,7 +222,20 @@
     cursor: pointer; width: 34px; height: 34px; border-radius: 50%; font-size: 1rem; transition: all 0.2s;
   }
   .close-btn:hover { border-color: var(--red); color: var(--red); }
-  .cart-items { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 4px 10px; display: flex; flex-direction: column; gap: 0; min-height: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+  .cart-items {
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 6px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    /* Ocupa todo el espacio disponible entre el header y el formulario */
+    flex: 1 1 0;
+    min-height: 0;
+  }
 
   /* ── CART ITEM ROWS ── */
   .ci-row {
@@ -282,7 +296,7 @@
   .cart-item-subtotal { font-size: 0.9rem; font-weight: 800; color: var(--yellow); }
 
   /* ── FORMULARIO ── */
-  .cart-form { padding: 14px 18px; border-top: 1px solid var(--border); background: var(--darker); }
+  .cart-form { padding: 14px 18px; border-top: 1px solid var(--border); background: var(--darker); flex-shrink: 0; }
   .cart-form h3 { font-size: 0.8rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
   .form-row { display: flex; gap: 8px; margin-bottom: 8px; }
   .form-input {
