@@ -221,7 +221,33 @@
     cursor: pointer; width: 34px; height: 34px; border-radius: 50%; font-size: 1rem; transition: all 0.2s;
   }
   .close-btn:hover { border-color: var(--red); color: var(--red); }
-  .cart-items { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 4px 10px; display: flex; flex-direction: column; gap: 0; min-height: 0; overscroll-behavior: contain; }
+  .cart-items { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 4px 10px; display: flex; flex-direction: column; gap: 0; min-height: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+
+  /* ── CART ITEM ROWS ── */
+  .ci-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 12px; width: 100%;
+  }
+  .ci-qty {
+    font-size: 0.78rem; font-weight: 800; color: var(--yellow);
+    min-width: 26px; flex-shrink: 0;
+  }
+  .ci-texto {
+    flex: 1; font-size: 0.78rem; color: var(--text);
+    line-height: 1.3; word-break: break-word;
+  }
+  .ci-precio {
+    font-size: 0.78rem; font-weight: 800; color: var(--yellow);
+    flex-shrink: 0; margin-left: 6px;
+  }
+  .ci-remove {
+    background: transparent; border: none; color: var(--muted);
+    cursor: pointer; font-size: 0.85rem; padding: 2px 4px;
+    border-radius: 6px; transition: all 0.2s; flex-shrink: 0;
+    line-height: 1;
+  }
+  .ci-remove:hover { color: var(--red); background: #ff000022; }
+  .cart-item-card { margin-bottom: 4px; }
   .cart-empty { text-align: center; color: var(--muted); padding: 40px 20px; }
   .cart-empty .empty-bolt { font-size: 3rem; display: block; margin-bottom: 12px; opacity: 0.4; }
 
@@ -687,10 +713,15 @@ function cambiarCantidad(plana, codigo, delta) {
 }
 
 function vaciarCarrito() {
+  // Deseleccionar visualmente todas las cartas visibles antes de limpiar
+  carrito.forEach(item => {
+    const el = $("carta-" + item.carta.plana + "-" + item.carta.codigo);
+    if (el) el.classList.remove("selected");
+  });
   carrito = [];
   renderCarrito();
   actualizarCount();
-  // Rerenderizar el par actual para que las cartas queden sin selección
+  // Re-renderizar el par actual para que todo quede limpio
   renderPar(parActual);
 }
 
@@ -808,20 +839,17 @@ async function confirmarPedido() {
   wrap.style.display = "block";
   bar.style.width = "15%";
 
+  const itemsComprimidos = carrito.map(x => ({
+    p: x.carta.plana,
+    c: x.carta.codigo,
+    q: x.cantidad
+  }));
+
   const pedido = {
-    carpeta: CARPETA,
+    carpeta:   CARPETA,
     cliente,
     instagram,
-    items: carrito.map(x => ({
-      plana:      x.carta.plana,
-      codigo:     x.carta.codigo,
-      pokemon:    x.carta.pokemon,
-      set:        x.carta.set,
-      numero:     x.carta.numero,
-      rareza:     x.carta.rareza,
-      precio_clp: x.carta.precio_clp,
-      cantidad:   x.cantidad
-    }))
+    items: itemsComprimidos
   };
 
   bar.style.width = "40%";
