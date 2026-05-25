@@ -859,21 +859,16 @@ async function confirmarPedido() {
   wrap.style.display = "block";
   bar.style.width = "15%";
 
-  // Enviar campos completos con nombres cortos para minimizar URL
-  // El Apps Script los recibe directo sin necesitar buscar en el inventario
+  // Solo p/c/q — mínimo posible para que la URL no supere el límite de Apps Script
+  // El Apps Script expande los datos completos desde el inventario del Sheet
   const pedido = {
     carpeta:   CARPETA,
     cliente,
     instagram,
     items: carrito.map(x => ({
-      p:  x.carta.plana,
-      c:  x.carta.codigo,
-      q:  x.cantidad,
-      pk: x.carta.pokemon,
-      s:  x.carta.set,
-      n:  x.carta.numero,
-      r:  x.carta.rareza,
-      cl: x.carta.precio_clp
+      p: String(x.carta.plana),
+      c: String(x.carta.codigo),
+      q: x.cantidad
     }))
   };
 
