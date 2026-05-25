@@ -169,6 +169,16 @@
   .rareza-Ultra-Rare    { background: #6e3d00; color: #ffc56e; }
   .rareza-Cracked-Ice   { background: #004d6e; color: #69eeff; }
   .carta-precio { font-size: 0.95rem; font-weight: 800; color: var(--yellow); }
+  /* ── SLOTS VACÍOS ── */
+  .carta-item.vacia {
+    background: #0a0a14;
+    border: 2px dashed #1a1a2a;
+    opacity: 0.25;
+    cursor: default;
+    pointer-events: none;
+    min-height: 120px;
+  }
+
   .agotado-badge {
     position: absolute; top: 6px; right: 6px;
     font-size: 0.6rem; font-weight: 800;
@@ -303,23 +313,17 @@
   .btn-confirmar:hover { transform: translateY(-2px); }
   .btn-confirmar:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-  /* ── BARRA DE PROGRESO ── */
   #progressWrap {
-    display: none;
-    width: 100%; height: 6px;
-    background: #1a1a2e;
-    border-radius: 3px;
-    overflow: hidden;
-    margin-bottom: 10px;
+    display: none; width: 100%; height: 6px;
+    background: #1a1a2e; border-radius: 3px;
+    overflow: hidden; margin-bottom: 10px;
   }
   #progressBar {
     height: 100%;
     background: linear-gradient(90deg, #FFD700, #FFA000);
-    border-radius: 3px;
-    width: 0%;
-    transition: width 0.4s ease;
+    border-radius: 3px; width: 0%;
+    transition: width 0.5s ease;
   }
-
   /* ── TOAST ── */
   .toast {
     position: fixed; bottom: 30px; left: 50%;
@@ -465,8 +469,8 @@
 
 <script>
 // ══════════════════════════════════════════════════
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbymkq81nv85-kf3QIbjnkPfYyQwN6PZIn9r8GsJ7iVMYbgL5CtvLCADHc9c5CCXtMCl/exec";
 const CARPETA = "PK";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbymkq81nv85-kf3QIbjnkPfYyQwN6PZIn9r8GsJ7iVMYbgL5CtvLCADHc9c5CCXtMCl/exec";
 // ══════════════════════════════════════════════════
 
 let inventario = [];
@@ -599,11 +603,20 @@ function crearPlanaSection(numPlana, cartas) {
 
 // ══ Carta item ══
 function crearCartaItem(carta) {
-  const agotada  = Number(carta.stock) <= 0;
-  const selected = carrito.some(x => x.carta.codigo === carta.codigo && Number(x.carta.plana) === Number(carta.plana));
+  const vacia    = carta.estado === "Vacío" || carta.pokemon === "Vacío";
+  const agotada  = !vacia && Number(carta.stock) <= 0;
+  const selected = !vacia && carrito.some(x => x.carta.codigo === carta.codigo && Number(x.carta.plana) === Number(carta.plana));
   const rarKey   = (carta.rareza || "Normal").replace(/\s+/g, "-");
 
   const div = document.createElement("div");
+
+  // Slot vacío — div en blanco, no clickeable
+  if (vacia) {
+    div.className = "carta-item vacia";
+    div.id = "carta-" + carta.plana + "-" + carta.codigo;
+    return div;
+  }
+
   div.className = "carta-item" + (agotada?" agotada":"") + (selected?" selected":"");
   div.id = "carta-" + carta.plana + "-" + carta.codigo;
   if (!agotada) div.onclick = () => toggleCarta(carta);
@@ -815,81 +828,57 @@ async function confirmarPedido() {
   if (!instaRaw) { $("inputInsta").classList.add("error");  showToast("⚠️ Ingresa tu usuario de Instagram", "error"); return; }
   if (carrito.length === 0) { showToast("⚠️ Tu carrito está vacío", "error"); return; }
 
-  const btn = $("btnConfirmar");
+  const btn  = $("btnConfirmar");
+  const wrap = $("progressWrap");
+  const bar  = $("progressBar");
+
   btn.disabled = true;
   btn.textContent = "⚡ Enviando...";
+  wrap.style.display = "block";
+  bar.style.width = "15%";
 
-  // Mostrar barra de progreso
-  mostrarProgreso(0);
-
-  const totalCarrito = carrito.reduce((s, x) => s + (x.carta.precio_clp * x.cantidad), 0);
-
-  // Pedido COMPRIMIDO: solo plana, codigo, cantidad por carta
-  // El Apps Script busca el resto desde el inventario del Sheet
   const pedido = {
+    carpeta: CARPETA,
     cliente,
     instagram,
-    total: totalCarrito,
     items: carrito.map(x => ({
-      p: String(x.carta.plana),    // plana
-      c: x.carta.codigo,           // codigo
-      q: x.cantidad                // cantidad
+      plana:      x.carta.plana,
+      codigo:     x.carta.codigo,
+      pokemon:    x.carta.pokemon,
+      set:        x.carta.set,
+      numero:     x.carta.numero,
+      rareza:     x.carta.rareza,
+      precio_clp: x.carta.precio_clp,
+      cantidad:   x.cantidad
     }))
   };
 
-  mostrarProgreso(30);
+  bar.style.width = "40%";
 
-  const url = APPS_SCRIPT_URL + "?carpeta=" + CARPETA +
-              "&data=" + encodeURIComponent(JSON.stringify(pedido));
+  try {
+    const url  = APPS_SCRIPT_URL + "?carpeta=" + CARPETA + "&data=" + encodeURIComponent(JSON.stringify(pedido));
+    bar.style.width = "70%";
+    const res  = await fetch(url);
+    bar.style.width = "90%";
+    const data = await res.json();
+    bar.style.width = "100%";
+    setTimeout(() => { wrap.style.display = "none"; bar.style.width = "0%"; }, 500);
 
-  mostrarProgreso(60);
-
-  // Usar Image() — nunca falla por CORS, funciona en todos los navegadores
-  const img = new Image();
-  let enviado = false;
-
-  const timeout = setTimeout(() => {
-    if (!enviado) {
-      enviado = true;
-      mostrarProgreso(100);
-      setTimeout(() => ocultarProgreso(), 500);
+    if (data.success) {
       cerrarCarrito();
-      $("successId").textContent = "Pedido enviado — Total: " + fCLP(totalCarrito);
+      $("successId").textContent = "ID: " + data.id + " — Total: " + fCLP(data.total);
       $("successScreen").classList.add("show");
       carrito = []; actualizarCount();
-      btn.disabled = false; btn.textContent = "⚡ CONFIRMAR PEDIDO";
+    } else {
+      throw new Error(data.error || "Error desconocido");
     }
-  }, 15000);
-
-  img.onload = img.onerror = () => {
-    if (!enviado) {
-      enviado = true;
-      clearTimeout(timeout);
-      mostrarProgreso(100);
-      setTimeout(() => ocultarProgreso(), 500);
-      cerrarCarrito();
-      $("successId").textContent = "Pedido enviado — Total: " + fCLP(totalCarrito);
-      $("successScreen").classList.add("show");
-      carrito = []; actualizarCount();
-      btn.disabled = false; btn.textContent = "⚡ CONFIRMAR PEDIDO";
-    }
-  };
-
-  mostrarProgreso(80);
-  img.src = url;
-}
-
-// Barra de progreso
-function mostrarProgreso(pct) {
-  var bar = $("progressBar");
-  var wrap = $("progressWrap");
-  if (!bar || !wrap) return;
-  wrap.style.display = "block";
-  bar.style.width = pct + "%";
-}
-function ocultarProgreso() {
-  var wrap = $("progressWrap");
-  if (wrap) wrap.style.display = "none";
+  } catch(err) {
+    wrap.style.display = "none"; bar.style.width = "0%";
+    showToast("❌ Error al enviar: " + err.message, "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "⚡ CONFIRMAR PEDIDO";
+  }
 }
 
 
