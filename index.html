@@ -150,7 +150,6 @@
   }
   .carta-item:hover:not(.agotada) { border-color: #FFD70066; }
   .carta-item.selected { border-color: var(--green); background: #001a0a; }
-  .carta-item.deselected { border-color: var(--red); background: #1a0000; box-shadow: 0 0 10px #e5393544; }
   .carta-item.cart-highlight { border-color: var(--green-hi) !important; box-shadow: 0 0 16px #69f0ae55 !important; }
   .carta-item.agotada { opacity: 0.45; cursor: not-allowed; }
 
@@ -611,20 +610,18 @@ function crearCartaItem(carta) {
 // ══ Toggle carta ══
 function toggleCarta(carta) {
   const idx = carrito.findIndex(x => x.carta.codigo === carta.codigo && Number(x.carta.plana) === Number(carta.plana));
-  const quitando = idx >= 0;
-  if (quitando) carrito.splice(idx, 1);
+  if (idx >= 0) carrito.splice(idx, 1);
   else carrito.push({ carta, cantidad: 1 });
-  actualizarCartaUI(carta, quitando);
+  actualizarCartaUI(carta);
   renderCarrito();
   actualizarCount();
 }
 
-function actualizarCartaUI(carta, quitando) {
+function actualizarCartaUI(carta) {
   const el = $("carta-" + carta.plana + "-" + carta.codigo);
   if (!el) return;
   const en = carrito.some(x => x.carta.codigo === carta.codigo && Number(x.carta.plana) === Number(carta.plana));
   el.classList.toggle("selected", en);
-  el.classList.toggle("deselected", quitando && !en);
 }
 
 // ══ Render carrito ══
@@ -690,10 +687,11 @@ function cambiarCantidad(plana, codigo, delta) {
 }
 
 function vaciarCarrito() {
-  carrito.forEach(item => {
-    const el = $("carta-" + item.carta.plana + "-" + item.carta.codigo);
-    if (el) { el.classList.remove("selected"); el.classList.add("deselected"); }
+  // Quitar clase selected de TODAS las cartas visibles en pantalla
+  document.querySelectorAll(".carta-item.selected").forEach(el => {
+    el.classList.remove("selected");
   });
+  // Vaciar array
   carrito = [];
   renderCarrito();
   actualizarCount();
@@ -703,8 +701,8 @@ function actualizarCount() {
   $("cartCount").textContent = carrito.reduce((s,x) => s+x.cantidad, 0);
 }
 
-function abrirCarrito()  { $("cartPanel").classList.add("open"); $("cartOverlay").classList.add("open"); renderCarrito(); }
-function cerrarCarrito() { $("cartPanel").classList.remove("open"); $("cartOverlay").classList.remove("open"); }
+function abrirCarrito()  { $("cartPanel").classList.add("open"); $("cartOverlay").classList.add("open"); renderCarrito(); document.body.style.overflow = "hidden"; }
+function cerrarCarrito() { $("cartPanel").classList.remove("open"); $("cartOverlay").classList.remove("open"); document.body.style.overflow = ""; }
 
 // ══ MODAL ZOOM ══
 let modalScale=1, modalX=0, modalY=0;
