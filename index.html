@@ -220,7 +220,7 @@
     cursor: pointer; width: 34px; height: 34px; border-radius: 50%; font-size: 1rem; transition: all 0.2s;
   }
   .close-btn:hover { border-color: var(--red); color: var(--red); }
-  .cart-items { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .cart-items { flex: 1; overflow-y: auto; padding: 10px 14px; display: flex; flex-direction: column; gap: 0; }
   .cart-empty { text-align: center; color: var(--muted); padding: 40px 20px; }
   .cart-empty .empty-bolt { font-size: 3rem; display: block; margin-bottom: 12px; opacity: 0.4; }
 
@@ -643,27 +643,14 @@ function renderCarrito() {
     card.addEventListener("mouseleave", () => highlightCarta(c.plana, c.codigo, false));
 
     card.innerHTML = `
-      <div class="cart-item-body">
-        <div class="cart-item-top">
-          <div style="flex:1;min-width:0">
-            <div class="cart-item-nombre">${c.pokemon}</div>
-            <div class="cart-item-detalle">${c.set} · ${c.numero}</div>
-            <div class="cart-item-detalle" style="margin-top:2px">
-              <span class="carta-rareza rareza-${rarKey}" style="font-size:0.55rem;padding:1px 6px">${c.rareza}</span>
-              <span style="color:var(--muted);font-size:0.65rem;margin-left:4px">Plana ${c.plana}</span>
-            </div>
-          </div>
-          <button class="cart-item-remove" onclick="quitarDelCarrito('${c.plana}','${c.codigo}')">✕</button>
-        </div>
-        <div class="cart-item-bottom" style="margin-top:8px">
-          <div class="qty-control">
-            <button class="qty-btn" onclick="cambiarCantidad('${c.plana}','${c.codigo}',-1)">−</button>
-            <span class="qty-num">${item.cantidad}</span>
-            <button class="qty-btn" onclick="cambiarCantidad('${c.plana}','${c.codigo}',1)">+</button>
-            <span class="cart-item-stock">/ ${c.stock}</span>
-          </div>
-          <span class="cart-item-subtotal">${fCLP(sub)}</span>
-        </div>
+      <div class="cart-item-linea">
+        <button class="qty-btn" onclick="cambiarCantidad('${c.plana}','${c.codigo}',-1)">−</button>
+        <span class="ci-qty">${item.cantidad}x</span>
+        <button class="qty-btn" onclick="cambiarCantidad('${c.plana}','${c.codigo}',1)">+</button>
+        <span class="ci-nombre" title="${c.pokemon} · ${c.set} ${c.numero} · ${c.rareza} · P${c.plana}">${c.pokemon} · ${c.set} ${c.numero}</span>
+        <span class="ci-rareza">${c.rareza}</span>
+        <span class="ci-precio">${fCLP(sub)}</span>
+        <button class="ci-remove" onclick="quitarDelCarrito('${c.plana}','${c.codigo}')" title="Quitar">✕</button>
       </div>
     `;
     cont.appendChild(card);
