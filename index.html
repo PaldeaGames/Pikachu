@@ -182,7 +182,7 @@
   .agotado-badge {
     position: absolute; top: 6px; right: 6px;
     font-size: 0.6rem; font-weight: 800;
-    background: var(--green); color: #fff;
+    background: var(--red); color: #fff;
     padding: 2px 7px; border-radius: 6px;
   }
   .check-overlay {
@@ -687,14 +687,11 @@ function cambiarCantidad(plana, codigo, delta) {
 }
 
 function vaciarCarrito() {
-  // Quitar clase selected de TODAS las cartas visibles en pantalla
-  document.querySelectorAll(".carta-item.selected").forEach(el => {
-    el.classList.remove("selected");
-  });
-  // Vaciar array
   carrito = [];
   renderCarrito();
   actualizarCount();
+  // Rerenderizar el par actual para que las cartas queden sin selección
+  renderPar(parActual);
 }
 
 function actualizarCount() {
