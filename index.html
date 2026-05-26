@@ -352,7 +352,14 @@
     height: 100%;
     background: linear-gradient(90deg, #FFD700, #FFA000);
     border-radius: 3px; width: 0%;
-    transition: width 0.5s ease;
+    transition: width 0.3s ease;
+  }
+  @keyframes progressAuto {
+    0%   { width: 0%; }
+    20%  { width: 30%; }
+    50%  { width: 60%; }
+    80%  { width: 82%; }
+    100% { width: 90%; }
   }
   /* ── TOAST ── */
   .toast {
@@ -856,7 +863,7 @@ async function confirmarPedido() {
   btn.disabled = true;
   btn.textContent = "⚡ Enviando...";
   wrap.style.display = "block";
-  bar.style.width = "15%";
+  bar.style.animation = "progressAuto 8s ease forwards";
 
   // Solo p/c/q — mínimo posible para que la URL no supere el límite de Apps Script
   // El Apps Script expande los datos completos desde el inventario del Sheet
@@ -871,16 +878,14 @@ async function confirmarPedido() {
     }))
   };
 
-  bar.style.width = "40%";
-
   try {
     const url  = APPS_SCRIPT_URL + "?carpeta=" + CARPETA + "&data=" + encodeURIComponent(JSON.stringify(pedido));
-    bar.style.width = "70%";
     const res  = await fetch(url);
-    bar.style.width = "90%";
     const data = await res.json();
+    // Completar barra al 100%
+    bar.style.animation = "none";
     bar.style.width = "100%";
-    setTimeout(() => { wrap.style.display = "none"; bar.style.width = "0%"; }, 500);
+    setTimeout(() => { wrap.style.display = "none"; bar.style.animation = "none"; bar.style.width = "0%"; }, 400);
 
     if (data.success) {
       cerrarCarrito();
@@ -891,7 +896,7 @@ async function confirmarPedido() {
       throw new Error(data.error || "Error desconocido");
     }
   } catch(err) {
-    wrap.style.display = "none"; bar.style.width = "0%";
+    wrap.style.display = "none"; bar.style.animation = "none"; bar.style.width = "0%";
     showToast("❌ Error al enviar: " + err.message, "error");
   } finally {
     btn.disabled = false;
