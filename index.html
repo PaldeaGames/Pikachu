@@ -342,26 +342,50 @@ function getImgUrlIdioma(item,idioma){
   return IMG_BASE+encodeURIComponent(conIdm).replace(/%20/g,'%20');
 }
 
-// Cache de URLs de idioma que fallaron: evita reintentar 404 en cada
-// re-render (era la causa del titileo al cambiar cantidades).
-var IMG_FAIL={};
+// ── Estrategia anti-parpadeo de imagen por idioma ──
+// El <img> SIEMPRE se pinta con la imagen base (imgSrcFor). La URL del
+// idioma se sondea aparte con new Image(); si carga, se hace swap in-place
+// via data-lang-src. Así nunca se ve el 404 titilar.
+var IMG_OK={};      // URLs de idioma confirmadas (cargan)
+var IMG_FAIL={};    // URLs de idioma o base que fallaron (404)
+var IMG_PROBING={}; // URLs de idioma en sondeo (evita duplicar new Image())
 function marcarImgFail(url){IMG_FAIL[url]=true;}
 
-// URL a usar: la del idioma SOLO si no ha fallado antes; si no, la base.
+// URL a pintar en el src: SIEMPRE la base (nunca titila).
 function imgSrcFor(item,idioma){
-  var u=getImgUrlIdioma(item,idioma);
-  if(u&&!IMG_FAIL[u]) return u;
   return getImgUrl(item,idioma);
 }
 
-// onerror del <img>: si fallo la URL de idioma, la registra y cae a la
-// base; si la base tambien falla, muestra el placeholder con el nombre.
-function imgFallback(item,idioma){
+// URL de idioma para el atributo data-lang-src: solo si aporta swap real
+// (existe, no es la base, y no está ya descartada). Si ya está en IMG_OK
+// devuelve la de idioma directo para pintarla sin esperar.
+function langSrcAttr(item,idioma){
+  var u=getImgUrlIdioma(item,idioma);
   var base=getImgUrl(item,idioma);
+  if(!u||u===base||IMG_FAIL[u]) return '';
+  probarImgIdioma(u); // dispara sondeo en segundo plano
+  return ' data-lang-src="'+u+'"';
+}
+
+// Sondea la URL de idioma; al confirmar, hace swap de todos los <img> que
+// la esperan (data-lang-src). Cachea resultado para no reintentar.
+function probarImgIdioma(u){
+  if(!u||IMG_OK[u]||IMG_FAIL[u]||IMG_PROBING[u]) { if(IMG_OK[u]) swapImgIdioma(u); return; }
+  IMG_PROBING[u]=true;
+  var probe=new Image();
+  probe.onload=function(){IMG_OK[u]=true;IMG_PROBING[u]=false;swapImgIdioma(u);};
+  probe.onerror=function(){IMG_FAIL[u]=true;IMG_PROBING[u]=false;};
+  probe.src=u;
+}
+function swapImgIdioma(u){
+  var lst=document.querySelectorAll('img[data-lang-src="'+u+'"]');
+  for(var i=0;i<lst.length;i++){ if(lst[i].src!==u) lst[i].src=u; }
+}
+
+// onerror del <img> base: si la base falla, muestra placeholder con nombre.
+function imgFallback(item,idioma){
   var safe=String(item.nombre||'').replace(/['"]/g,'');
-  var ph='this.onerror=null;this.parentElement.innerHTML=\'<div class=&quot;ph&quot;>'+safe+'</div>\'';
-  if(base) return 'marcarImgFail(this.src);this.onerror=function(){'+ph+'};this.src=\''+base+'\'';
-  return ph;
+  return 'this.onerror=null;this.parentElement.innerHTML=\'<div class=&quot;ph&quot;>'+safe+'</div>\'';
 }
 
 // ── Labels de idioma
@@ -548,7 +572,7 @@ function buildCardHtml(it){
   var url=imgSrcFor(it,idioma);
 
   var imgHtml=url
-    ?'<img src="'+url+'" alt="'+it.nombre+'" loading="lazy" onerror="'+imgFallback(it,idioma)+'">'
+    ?'<img src="'+url+'" alt="'+it.nombre+'"'+langSrcAttr(it,idioma)+' loading="lazy" onerror="'+imgFallback(it,idioma)+'">'
     :'<div class="ph">'+it.nombre+'<br><small style="opacity:.5">'+String(it.numero||'')+'</small></div>';
   var agotadoOvr=agotado?'<div class="agotado-center">Agotado</div>':'';
 
@@ -612,7 +636,7 @@ function renderTable(rows,cont){
     var prc=getPrc(it,idioma);
     var agotado=stkTotal(it)===0;
     var url=imgSrcFor(it,idioma);
-    var imgHtml=url?'<img src="'+url+'" alt="'+it.nombre+'" style="width:44px;border-radius:4px" loading="lazy" onerror="'+imgFallback(it,idioma)+'">':'—';
+    var imgHtml=url?'<img src="'+url+'" alt="'+it.nombre+'" style="width:44px;border-radius:4px"'+langSrcAttr(it,idioma)+' loading="lazy" onerror="'+imgFallback(it,idioma)+'">':'—';
     var langBtns='';
     disp.forEach(function(idm){
       var s=getStk(it,idm);
@@ -678,7 +702,7 @@ function buildRowHtml(it){
   var stk=getStk(it,idioma),prc=getPrc(it,idioma);
   var agotado=stkTotal(it)===0;
   var url=imgSrcFor(it,idioma);
-  var imgHtml=url?'<img src="'+url+'" alt="'+it.nombre+'" style="width:44px;border-radius:4px" loading="lazy" onerror="'+imgFallback(it,idioma)+'">':'—';
+  var imgHtml=url?'<img src="'+url+'" alt="'+it.nombre+'" style="width:44px;border-radius:4px"'+langSrcAttr(it,idioma)+' loading="lazy" onerror="'+imgFallback(it,idioma)+'">':'—';
   var langBtns='';
   disp.forEach(function(idm){
     var s=getStk(it,idm);
