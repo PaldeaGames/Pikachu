@@ -29,6 +29,9 @@ header p{font-size:.75rem;color:var(--txm);margin-top:1px}
 .paste-banner{display:flex;align-items:center;justify-content:center;gap:10px;width:calc(100% - 28px);margin:12px 14px;border:2px dashed var(--accent);border-radius:12px;cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center;background:var(--accent-dim);color:var(--accent);padding:13px 20px;font-size:.86rem;font-weight:800;letter-spacing:.02em;transition:background .15s,box-shadow .15s}
 .paste-banner:hover{background:rgba(232,255,71,.2);box-shadow:0 0 16px rgba(232,255,71,.3)}
 .paste-banner svg{width:18px;height:18px;flex-shrink:0}
+.pb-txt{display:flex;flex-direction:column;align-items:flex-start;text-align:left;line-height:1.25}
+.pb-txt b{font-size:.9rem}
+.pb-txt small{font-weight:500;font-size:.72rem;opacity:.75}
 @media(max-width:480px){.paste-banner{padding:10px 14px;font-size:.76rem;width:calc(100% - 20px);margin:10px}}
 .bar-sticky{background:var(--bg);padding:10px 20px 8px;border-bottom:1px solid var(--brd);box-shadow:0 8px 14px -10px rgba(0,0,0,.6)}
 @media(max-width:480px){.bar-sticky{padding:8px 14px 6px}}
@@ -59,6 +62,9 @@ header p{font-size:.75rem;color:var(--txm);margin-top:1px}
 .listado-banner{display:flex;align-items:center;justify-content:space-between;gap:10px;background:rgba(124,92,191,.14);border:1px solid var(--acc);border-radius:9px;padding:10px 14px;margin-bottom:14px;font-size:.8rem;color:#cdb8ff}
 .listado-banner button{background:var(--surf2);border:1px solid var(--brd2);color:var(--tx);padding:5px 11px;border-radius:7px;font-size:.74rem;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0}
 .listado-banner button:hover{border-color:var(--acc);color:#fff}
+.listado-banner .lb-add{background:rgba(80,220,140,.12);border-color:#3aa76a;color:#7ee8ad}
+.listado-banner .lb-add:hover{background:rgba(80,220,140,.22);color:#a8f5c8}
+.listado-banner .lb-add:disabled{opacity:.7;cursor:default}
 /* Grid */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
 @media(max-width:600px){.grid{grid-template-columns:repeat(2,1fr);gap:8px}}
@@ -166,6 +172,8 @@ header p{font-size:.75rem;color:var(--txm);margin-top:1px}
 .cart-item-price{font-size:.86rem;font-weight:700;color:var(--gold);white-space:nowrap}
 .cart-remove{background:none;border:none;color:var(--txm);cursor:pointer;font-size:1rem;padding:3px 7px;border-radius:5px;flex-shrink:0;transition:all .15s}
 .cart-remove:hover{color:var(--red);background:rgba(255,77,77,.1)}
+.cart-clear{width:100%;background:none;border:1px dashed var(--brd2);color:var(--txm);padding:9px;border-radius:8px;font-size:.76rem;cursor:pointer;margin-top:4px;font-family:'DM Sans',sans-serif;transition:all .15s}
+.cart-clear:hover{border-color:var(--red);color:var(--red)}
 .cart-footer{padding:18px 22px;border-top:1px solid rgba(255,255,255,.07);flex-shrink:0;background:rgba(0,0,0,.15)}
 .cart-total{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px}
 .cart-total-label{font-size:.8rem;color:var(--txm);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
@@ -235,7 +243,7 @@ header p{font-size:.75rem;color:var(--txm);margin-top:1px}
   <div class="sync-bar" id="syncBar">Cargando inventario...</div>
   <button class="paste-banner" onclick="abrirListado()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
-    Pegar listado de cartas
+    <span class="pb-txt"><b>Busca tus cartas más rápido</b><small>Pega tu listado completo y las encontramos al instante — haz clic aquí</small></span>
   </button>
   <div class="bar-sticky" id="filtros-bar"></div>
 </div>
@@ -334,13 +342,25 @@ function getImgUrlIdioma(item,idioma){
   return IMG_BASE+encodeURIComponent(conIdm).replace(/%20/g,'%20');
 }
 
-// Devuelve el atributo onerror con la cadena de fallback:
-//   imagen_IDIOMA.jpg  ->  imagen.jpg  ->  placeholder con el nombre
+// Cache de URLs de idioma que fallaron: evita reintentar 404 en cada
+// re-render (era la causa del titileo al cambiar cantidades).
+var IMG_FAIL={};
+function marcarImgFail(url){IMG_FAIL[url]=true;}
+
+// URL a usar: la del idioma SOLO si no ha fallado antes; si no, la base.
+function imgSrcFor(item,idioma){
+  var u=getImgUrlIdioma(item,idioma);
+  if(u&&!IMG_FAIL[u]) return u;
+  return getImgUrl(item,idioma);
+}
+
+// onerror del <img>: si fallo la URL de idioma, la registra y cae a la
+// base; si la base tambien falla, muestra el placeholder con el nombre.
 function imgFallback(item,idioma){
   var base=getImgUrl(item,idioma);
   var safe=String(item.nombre||'').replace(/['"]/g,'');
   var ph='this.onerror=null;this.parentElement.innerHTML=\'<div class=&quot;ph&quot;>'+safe+'</div>\'';
-  if(base) return 'this.onerror=function(){'+ph+'};this.src=\''+base+'\'';
+  if(base) return 'marcarImgFail(this.src);this.onerror=function(){'+ph+'};this.src=\''+base+'\'';
   return ph;
 }
 
@@ -525,7 +545,7 @@ function buildCardHtml(it){
   var prc=getPrc(it,idioma);
   var agotado=stkTotal(it)===0;
   // Imagen del idioma elegido; si no existe, cae a la imagen por defecto.
-  var url=getImgUrlIdioma(it,idioma)||getImgUrl(it,idioma);
+  var url=imgSrcFor(it,idioma);
 
   var imgHtml=url
     ?'<img src="'+url+'" alt="'+it.nombre+'" loading="lazy" onerror="'+imgFallback(it,idioma)+'">'
@@ -540,7 +560,7 @@ function buildCardHtml(it){
       var s=getStk(it,idm);
       var act=idioma===idm;
       langHtml+='<button class="lang-btn'+(act?' active':'')+(s===0?' agotado-lang':'')+'"'
-        +(s>0?' onclick="setIdiomaCard('+JSON.stringify(k)+','+JSON.stringify(idm)+')"':' disabled')
+        +(s>0?' onclick="setIdiomaCard(\''+k+'\',\''+idm+'\')"':' disabled')
         +'>'+labelIdioma(idm)+'</button>';
     });
     langHtml+='</div>';
@@ -557,7 +577,7 @@ function buildCardHtml(it){
       +(prc>0&&stk>0
         ?'<div class="qty-wrap">'
           +'<button class="qty-btn" onclick="cambiarQty(\''+k+'\',\''+idioma+'\','+(qty>0?-1:0)+')" '+(qty===0?'disabled':'')+'>−</button>'
-          +'<span class="qty-num" style="color:'+(qty>0?'var(--accent)':'var(--txm)')+'">'+qty+'</span>'
+          +'<span class="qty-num" style="color:'+(qty>=stk&&qty>0?'#ff5a5a':(qty>0?'var(--accent)':'var(--txm)'))+'">'+qty+'</span>'
           +'<button class="qty-btn" onclick="cambiarQty(\''+k+'\',\''+idioma+'\',1)" '+(qty>=stk?'disabled':'')+'>+</button>'
           +'</div>'
         :'')
@@ -591,13 +611,13 @@ function renderTable(rows,cont){
     var stk=getStk(it,idioma);
     var prc=getPrc(it,idioma);
     var agotado=stkTotal(it)===0;
-    var url=getImgUrlIdioma(it,idioma)||getImgUrl(it,idioma);
+    var url=imgSrcFor(it,idioma);
     var imgHtml=url?'<img src="'+url+'" alt="'+it.nombre+'" style="width:44px;border-radius:4px" loading="lazy" onerror="'+imgFallback(it,idioma)+'">':'—';
     var langBtns='';
     disp.forEach(function(idm){
       var s=getStk(it,idm);
       langBtns+='<button class="lang-btn'+(idioma===idm?' active':'')+(s===0?' agotado-lang':'')+'"'
-        +(s>0?' onclick="setIdiomaCard('+JSON.stringify(k)+','+JSON.stringify(idm)+')"':' disabled')+'>'+labelIdioma(idm)+'</button> ';
+        +(s>0?' onclick="setIdiomaCard(\''+k+'\',\''+idm+'\')"':' disabled')+'>'+labelIdioma(idm)+'</button> ';
     });
     var en=CARRITO.find(function(c){return c.key===k&&c.idioma===idioma;});
     var qty=en?en.qty:0;
@@ -605,7 +625,7 @@ function renderTable(rows,cont){
     if(stk>0&&prc>0){
       cartCell='<div class="qty-wrap">'
         +'<button class="qty-btn" onclick="cambiarQty(\''+k+'\',\''+idioma+'\','+(qty>0?-1:0)+')" '+(qty===0?'disabled':'')+'>−</button>'
-        +'<span class="qty-num">'+qty+'</span>'
+        +'<span class="qty-num" style="color:'+(qty>=stk&&qty>0?'#ff5a5a':'var(--tx)')+'">'+qty+'</span>'
         +'<button class="qty-btn" onclick="cambiarQty(\''+k+'\',\''+idioma+'\',1)" '+(qty>=stk?'disabled':'')+'>+</button></div>';
     }
     h+='<tr'+(agotado?' class="agotado-row"':'')+' id="tr-'+CSS.escape(k)+'">'
@@ -632,7 +652,7 @@ function cambiarQty(k,idioma,delta){
     var nv=CARRITO[idx].qty+delta;
     if(nv<=0) CARRITO.splice(idx,1); else CARRITO[idx].qty=Math.min(nv,stk);
   } else if(delta>0&&prc>0&&stk>0){
-    CARRITO.push({key:k,nombre:it.nombre,rareza:it.rareza,idioma:idioma,precio:prc,qty:1,img:(getImgUrlIdioma(it,idioma)||getImgUrl(it,idioma)),set:it.set||'',set_nombre:it.set_nombre||'',numero:it.numero||''});
+    CARRITO.push({key:k,nombre:it.nombre,rareza:it.rareza,idioma:idioma,precio:prc,qty:1,img:getImgUrl(it,idioma),set:it.set||'',set_nombre:it.set_nombre||'',numero:it.numero||''});
   }
   actualizarCarritoBtn();
   // Re-render solo la carta afectada si está en grid
@@ -657,13 +677,13 @@ function buildRowHtml(it){
   var disp=getIdiomasDisp(it);
   var stk=getStk(it,idioma),prc=getPrc(it,idioma);
   var agotado=stkTotal(it)===0;
-  var url=getImgUrlIdioma(it,idioma)||getImgUrl(it,idioma);
+  var url=imgSrcFor(it,idioma);
   var imgHtml=url?'<img src="'+url+'" alt="'+it.nombre+'" style="width:44px;border-radius:4px" loading="lazy" onerror="'+imgFallback(it,idioma)+'">':'—';
   var langBtns='';
   disp.forEach(function(idm){
     var s=getStk(it,idm);
     langBtns+='<button class="lang-btn'+(idioma===idm?' active':'')+(s===0?' agotado-lang':'')+'"'
-      +(s>0?' onclick="setIdiomaCard('+JSON.stringify(k)+','+JSON.stringify(idm)+')"':' disabled')+'>'+labelIdioma(idm)+'</button> ';
+      +(s>0?' onclick="setIdiomaCard(\''+k+'\',\''+idm+'\')"':' disabled')+'>'+labelIdioma(idm)+'</button> ';
   });
   var en=CARRITO.find(function(c){return c.key===k&&c.idioma===idioma;});
   var qty=en?en.qty:0;
@@ -671,7 +691,7 @@ function buildRowHtml(it){
   if(stk>0&&prc>0){
     cartCell='<div class="qty-wrap">'
       +'<button class="qty-btn" onclick="cambiarQty(\''+k+'\',\''+idioma+'\','+(qty>0?-1:0)+')" '+(qty===0?'disabled':'')+'>−</button>'
-      +'<span class="qty-num">'+qty+'</span>'
+      +'<span class="qty-num" style="color:'+(qty>=stk&&qty>0?'#ff5a5a':'var(--tx)')+'">'+qty+'</span>'
       +'<button class="qty-btn" onclick="cambiarQty(\''+k+'\',\''+idioma+'\',1)" '+(qty>=stk?'disabled':'')+'>+</button></div>';
   }
   return '<td>'+imgHtml+'</td>'
@@ -724,11 +744,36 @@ function mostrarBannerListado(){
   if(!LISTADO_IDS) return;
   var div=document.createElement('div');
   div.id='listado-banner';div.className='listado-banner';
-  div.innerHTML='<span>'+LISTADO_RESUMEN+'</span><button onclick="limpiarListado()">Quitar filtro</button>';
+  div.innerHTML='<span>'+LISTADO_RESUMEN+'</span>'
+    +'<div style="display:flex;gap:8px;flex-shrink:0">'
+    +'<button class="lb-add" onclick="agregarTodasListado(this)">🛒 Agregar todas (1 u.)</button>'
+    +'<button onclick="limpiarListado()">Quitar filtro</button></div>';
   var vMain=document.getElementById('v-main');
   if(vMain&&vMain.parentElement) vMain.parentElement.insertBefore(div,vMain);
 }
 function limpiarListado(){LISTADO_IDS=null;LISTADO_RESUMEN=null;var b=document.getElementById('listado-banner');if(b)b.remove();renderAll();}
+
+// Agrega 1 unidad de cada carta visible del listado al carrito.
+// Respeta el idioma activo de cada tarjeta; omite las sin stock o precio
+// y las que ya estan en el carrito (no duplica).
+function agregarTodasListado(btn){
+  if(!LISTADO_IDS) return;
+  var agregadas=0,omitidas=0;
+  filtered().forEach(function(it){
+    var idioma=idiomaActivo(it);
+    var stk=getStk(it,idioma),prc=getPrc(it,idioma);
+    var k=itemKey(it);
+    var ya=CARRITO.some(function(c){return c.key===k&&c.idioma===idioma;});
+    if(ya){omitidas++;return;}
+    if(stk>0&&prc>0){
+      CARRITO.push({key:k,nombre:it.nombre,rareza:it.rareza,idioma:idioma,precio:prc,qty:1,img:getImgUrl(it,idioma),set:it.set||'',set_nombre:it.set_nombre||'',numero:it.numero||''});
+      agregadas++;
+    } else {omitidas++;}
+  });
+  actualizarCarritoBtn();renderAll();
+  if(btn){btn.textContent='✓ '+agregadas+' agregada'+(agregadas===1?'':'s')+(omitidas?' ('+omitidas+' omitidas)':'');btn.disabled=true;}
+  if(agregadas>0) abrirCarrito();
+}
 
 // ── Carrito panel
 var CHECKOUT_VIEW='cart',entregaMode='',direccionMode='domicilio';
@@ -752,21 +797,28 @@ function renderVistaCarrito(){
   CARRITO.forEach(function(c){
     var sub=c.precio*c.qty;total+=sub;
     h+='<div class="cart-item">';
-    if(c.img) h+='<img src="'+c.img+'" alt="'+c.nombre+'">';
+    if(c.img) h+='<img src="'+c.img+'" alt="'+c.nombre+'" onerror="this.style.display=\'none\'">';
     h+='<div class="cart-item-info">'
       +'<div class="cart-item-name">'+c.nombre+'</div>'
       +'<div class="cart-item-meta">'+rarLabel(c.rareza)+' · '+labelIdioma(c.idioma)+' · '+(c.set_nombre||c.set||'—')+' #'+c.numero+'</div>'
       +'<div style="font-size:.72rem;color:var(--txm);margin-top:2px">'+clp(c.precio)+' × '+c.qty+'</div></div>'
       +'<div style="text-align:right;flex-shrink:0"><div class="cart-item-price">'+clp(sub)+'</div>'
       +'<div class="qty-wrap" style="margin-top:4px;justify-content:flex-end">'
-      +'<button class="qty-btn" onclick="cambiarQtyCart('+JSON.stringify(c.key)+','+JSON.stringify(c.idioma)+',-1)">−</button>'
-      +'<span class="qty-num">'+c.qty+'</span>'
-      +'<button class="qty-btn" onclick="cambiarQtyCart('+JSON.stringify(c.key)+','+JSON.stringify(c.idioma)+',1)">+</button>'
+      +'<button class="qty-btn" onclick="cambiarQtyCart(\''+c.key+'\',\''+c.idioma+'\',-1)">−</button>'
+      +(function(){var itC=INVENTARIO.find(function(x){return itemKey(x)===c.key;});var mx=itC?getStk(itC,c.idioma):0;return '<span class="qty-num" style="color:'+(c.qty>=mx&&mx>0?'#ff5a5a':'var(--tx)')+'">'+c.qty+'</span>';})()
+      +'<button class="qty-btn" onclick="cambiarQtyCart(\''+c.key+'\',\''+c.idioma+'\',1)">+</button>'
       +'</div></div>'
-      +'<button class="cart-remove" onclick="quitarCart('+JSON.stringify(c.key)+','+JSON.stringify(c.idioma)+')">✕</button></div>';
+      +'<button class="cart-remove" onclick="quitarCart(\''+c.key+'\',\''+c.idioma+'\')">✕</button></div>';
   });
+  h+='<button class="cart-clear" onclick="vaciarCarrito()">🗑 Vaciar carrito</button>';
   body.innerHTML=h;
   document.getElementById('cart-total').textContent=clp(total);
+}
+
+function vaciarCarrito(){
+  if(!CARRITO.length) return;
+  CARRITO=[];
+  actualizarCarritoBtn();renderAll();renderCarritoPanel();
 }
 
 function cambiarQtyCart(k,idioma,delta){cambiarQty(k,idioma,delta);renderCarritoPanel();}
