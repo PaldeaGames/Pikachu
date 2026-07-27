@@ -327,7 +327,7 @@ header p{font-size:.75rem;color:var(--txm);margin-top:1px}
       <textarea id="paste-textarea" placeholder="4 Pikachu EVS 49&#10;2 Pikachu Silver Tempest&#10;Flying Pikachu x3&#10;Pikachu 25"></textarea>
       <div style="display:flex;gap:8px">
         <button class="vb" style="flex:1;padding:9px" onclick="cotizarListaPK()">Cotizar lista</button>
-        <button class="vb" style="padding:9px 14px" onclick="limpiarListaPK()">Limpiar</button>
+        <button class="vb" style="padding:9px 14px" onclick="limpiarListaPK()" title="Vacia el texto, la cotizacion y el carrito">Limpiar todo</button>
       </div>
       <div id="paste-resultado"></div>
     </div>
@@ -1115,12 +1115,27 @@ function cotizarListaPK(){
   renderAll();
 }
 
+// "Limpiar todo" = empezar de cero. Vacia el texto, la cotizacion Y el
+// carrito. Antes solo borraba el texto, asi que al cotizar una carta
+// nueva salia como "ya la tienes en el carrito" por lo que habia quedado
+// de la lista anterior. Si el carrito tiene algo, se pide confirmacion
+// para no borrarlo por accidente.
 function limpiarListaPK(){
+  var unidades=CARRITO.reduce(function(s,c){return s+c.qty;},0);
+  if(unidades>0){
+    var totalC=CARRITO.reduce(function(s,c){return s+c.precio*c.qty;},0);
+    var ok=confirm('Esto vacia tambien tu carrito ('+unidades+' carta(s), '+clp(totalC)+') y empieza de cero.\n\n¿Continuar?');
+    if(!ok) return;
+  }
   document.getElementById('paste-textarea').value='';
   document.getElementById('paste-resultado').innerHTML='';
   COTIZ=[]; COTIZ_NOPE=[];
   LISTADO_IDS=null; LISTADO_RESUMEN=null;
-  actualizarFooterLista();   // si el carrito tiene algo, deja "Ir al carrito"
+  CARRITO=[];
+  CHECKOUT_VIEW='cart';
+  VINO_DEL_LISTADO=false;
+  actualizarCarritoBtn();
+  actualizarFooterLista();
   renderAll();
 }
 
