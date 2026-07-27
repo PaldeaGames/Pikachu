@@ -276,6 +276,7 @@ header p{font-size:.75rem;color:var(--txm);margin-top:1px}
 .ag-meta{font-size:.65rem;color:var(--txm)}
 .ag-qty{font-size:.7rem;color:var(--txm);flex-shrink:0}
 .ag-nota{font-size:.67rem;color:var(--txm);padding:7px 0 3px;line-height:1.45;border-top:1px solid var(--brd);margin-top:4px}
+.cotiz-aviso{display:none;background:rgba(124,92,191,.14);border:1px solid var(--acc);border-radius:8px;padding:9px 12px;margin:10px 0 0;font-size:.76rem;color:#cdb8ff;line-height:1.45}
 </style>
 </head>
 <body>
@@ -319,9 +320,9 @@ header p{font-size:.75rem;color:var(--txm);margin-top:1px}
     <div class="cart-head"><h2>Pegar listado</h2><button class="cart-close" onclick="cerrarPegarListado()">x</button></div>
     <div class="paste-body">
       <div class="lista-hint">Pega tu lista, <b>una carta por línea</b>. Reconoce varios formatos:
-        <div class="lista-ej">4 Pikachu EVS 49<br>2 Pikachu Evolving Skies<br>Pikachu PGO 28<br>Flying Pikachu x3<br>Pikachu 25</div>
+        <div class="lista-ej">4 Pikachu EVS 49<br>2 Pikachu Silver Tempest<br>Pikachu PGO 28<br>Flying Pikachu x3<br>Pikachu 25</div>
       </div>
-      <textarea id="paste-textarea" placeholder="4 Pikachu EVS 49&#10;2 Pikachu Evolving Skies&#10;Flying Pikachu x3&#10;Pikachu 25"></textarea>
+      <textarea id="paste-textarea" placeholder="4 Pikachu EVS 49&#10;2 Pikachu Silver Tempest&#10;Flying Pikachu x3&#10;Pikachu 25"></textarea>
       <div style="display:flex;gap:8px">
         <button class="vb" style="flex:1;padding:9px" onclick="cotizarListaPK()">Cotizar lista</button>
         <button class="vb" style="padding:9px 14px" onclick="limpiarListaPK()">Limpiar</button>
@@ -1173,10 +1174,15 @@ function renderCotizacion(){
   // Las que tienen stock se muestran completas con miniatura.
   // Las agotadas van en un listado compacto: ocupan menos y dejan
   // claro que "esta falto, pero puedes llevar el resto".
-  var conStock=[], agotadas=[];
+  var conStock=[], agotadas=[], repetidas=[];
   COTIZ.forEach(function(e,idx){
-    if(e.estado==='sin'&&!e.off) agotadas.push({e:e,idx:idx});
-    else conStock.push({e:e,idx:idx});
+    if(e.off) return;   // agregadas o quitadas van en sus propias secciones
+    if(e.estado!=='sin'){ conStock.push({e:e,idx:idx}); return; }
+    // disp=0 puede ser por dos motivos MUY distintos:
+    //  - dup: otra linea de la lista ya se llevo todo el stock
+    //  - sin stock real de la carta
+    if(e.dup) repetidas.push({e:e,idx:idx});
+    else agotadas.push({e:e,idx:idx});
   });
 
   if(conStock.length){
@@ -1184,8 +1190,23 @@ function renderCotizacion(){
     conStock.forEach(function(o){ h+=buildRiPK(o.e,o.idx); });
   }
 
+  if(repetidas.length){
+    h+='<div class="sec-label" style="color:#7fb4ff">Repetidas en tu lista \u00B7 '+repetidas.length+'</div>';
+    h+='<div class="ag-box">';
+    repetidas.forEach(function(o){
+      var r=o.e.found;
+      h+='<div class="ag-row">'
+        +'<div class="ag-info"><span class="ag-nom">'+escHtml(o.e.item.display)+'</span>'
+        +'<span class="ag-meta">es la misma carta que '+r[2].toUpperCase()+' '+r[3]+', ya contada arriba</span></div>'
+        +'<span class="ag-qty">x'+o.e.item.qty+'</span>'
+        +'<button class="ri-x" onclick="toggleOffCotiz('+o.idx+')" title="Quitar de la lista">\u2715</button>'
+        +'</div>';
+    });
+    h+='<div class="ag-nota">Escribiste esta carta en mas de una linea. Se cuenta una sola vez, hasta donde alcanza el stock.</div></div>';
+  }
+
   if(agotadas.length){
-    h+='<div class="sec-label" style="color:#ffb347">Agotadas \u00B7 '+agotadas.length+'</div>';
+    h+='<div class="sec-label" style="color:#ffb347">Sin stock \u00B7 '+agotadas.length+'</div>';
     h+='<div class="ag-box">';
     agotadas.forEach(function(o){
       var r=o.e.found;
@@ -1397,8 +1418,28 @@ function agregarCotizacionAlCarrito(){
   });
   actualizarCarritoBtn();
   renderAll();
+  renderCotizacion();          // el panel debe reflejar que ya se agregaron
+  if(n===0){
+    // Nada nuevo que agregar: se avisa y NO se cierra el panel, para no
+    // dejar al usuario tirado en la grilla sin explicacion.
+    var cont=document.getElementById('paste-resultado');
+    var av=document.getElementById('cotiz-aviso');
+    if(!av&&cont){
+      av=document.createElement('div');
+      av.id='cotiz-aviso';
+      av.className='cotiz-aviso';
+      cont.parentElement.insertBefore(av,cont);
+    }
+    if(av){
+      av.textContent='Todo lo disponible de esta lista ya esta en tu carrito.';
+      av.style.display='block';
+      setTimeout(function(){ if(av) av.style.display='none'; },3500);
+    }
+    return;
+  }
   cerrarPegarListado();
-  if(n>0){ VINO_DEL_LISTADO=true; abrirCarrito(); }
+  VINO_DEL_LISTADO=true;
+  abrirCarrito();
 }
 
 function mostrarBannerListado(){
@@ -1430,15 +1471,19 @@ function abrirCarrito(){
   CHECKOUT_VIEW='cart';
   document.getElementById('carrito-panel').classList.add('show');
   renderCarritoPanel();
+  // Si hay una cotizacion viva se ofrece volver a ella, sin importar
+  // si el carrito se abrio desde el listado o desde el icono del header.
   var b=document.getElementById('cart-back-btn');
   if(b){
-    b.textContent=VINO_DEL_LISTADO?'\u2190 Volver al listado':'Seguir viendo';
-    b.setAttribute('onclick',VINO_DEL_LISTADO?'volverAlListado()':'cerrarCarrito()');
+    var hayLista=(COTIZ.length>0||COTIZ_NOPE.length>0);
+    b.textContent=hayLista?'\u2190 Volver al listado':'Seguir viendo';
+    b.setAttribute('onclick',hayLista?'volverAlListado()':'cerrarCarrito()');
   }
 }
 function volverAlListado(){
   cerrarCarrito();
   abrirPegarListado();
+  if(COTIZ.length||COTIZ_NOPE.length) renderCotizacion();
 }
 function cerrarCarrito(){document.getElementById('carrito-panel').classList.remove('show');}
 
