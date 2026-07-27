@@ -277,6 +277,8 @@ header p{font-size:.75rem;color:var(--txm);margin-top:1px}
 .ag-qty{font-size:.7rem;color:var(--txm);flex-shrink:0}
 .ag-nota{font-size:.67rem;color:var(--txm);padding:7px 0 3px;line-height:1.45;border-top:1px solid var(--brd);margin-top:4px}
 .cotiz-aviso{display:none;background:rgba(124,92,191,.14);border:1px solid var(--acc);border-radius:8px;padding:9px 12px;margin:10px 0 0;font-size:.76rem;color:#cdb8ff;line-height:1.45}
+.carrito-strip{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:8px;padding:9px 12px;border-radius:9px;background:var(--surf2);border:1px solid var(--brd);font-size:.74rem;color:var(--txm)}
+.carrito-strip strong{color:var(--gold);font-family:'Syne',sans-serif}
 </style>
 </head>
 <body>
@@ -612,6 +614,7 @@ function build(){
   var el=document.getElementById('tab-main');
   el.innerHTML='<div id="v-main"></div>';
   renderAll();
+  actualizarFooterLista();
   ajustarStickyOffset();
 }
 
@@ -904,8 +907,7 @@ function actualizarCarritoBtn(){
   // formulario, repintar borraria los datos que el cliente ya escribio.
   var panel=document.getElementById('carrito-panel');
   if(panel&&panel.classList.contains('show')&&CHECKOUT_VIEW==='cart') renderCarritoPanel();
-  var pl=document.getElementById('paste-panel');
-  if(pl&&pl.classList.contains('show')) actualizarFooterLista();
+  sincronizarCotizacion();
 }
 
 /* ===================== PEGAR LISTADO ===================== */
@@ -1048,19 +1050,26 @@ function elegirVariante(cands){
 function cotizarListaPK(){
   var raw=document.getElementById('paste-textarea').value;
   var cont=document.getElementById('paste-resultado');
+  // Cotizar SIEMPRE reemplaza la cotizacion anterior. Antes, con el
+  // cuadro vacio se hacia return dejando viva la lista previa y el pie
+  // escondido: quedaba mostrando datos de una lista que ya no existia.
+  COTIZ=[]; COTIZ_NOPE=[];
+  LISTADO_IDS=null; LISTADO_RESUMEN=null;
+
   if(!raw.trim()){
     cont.innerHTML='<div class="nope-row" style="color:var(--red)">Pega al menos una carta.</div>';
-    document.getElementById('lista-footer').style.display='none';
+    actualizarFooterLista();
+    renderAll();
     return;
   }
   var items=raw.split('\n').map(parsearLineaPK).filter(Boolean);
   if(!items.length){
     cont.innerHTML='<div class="nope-row" style="color:var(--red)">No se reconocio ninguna carta.</div>';
-    document.getElementById('lista-footer').style.display='none';
+    actualizarFooterLista();
+    renderAll();
     return;
   }
 
-  COTIZ=[]; COTIZ_NOPE=[];
   items.forEach(function(item){
     var res=buscarItemPK(item);
     if(!res){ COTIZ_NOPE.push(item); return; }
@@ -1109,9 +1118,9 @@ function cotizarListaPK(){
 function limpiarListaPK(){
   document.getElementById('paste-textarea').value='';
   document.getElementById('paste-resultado').innerHTML='';
-  document.getElementById('lista-footer').style.display='none';
   COTIZ=[]; COTIZ_NOPE=[];
   LISTADO_IDS=null; LISTADO_RESUMEN=null;
+  actualizarFooterLista();   // si el carrito tiene algo, deja "Ir al carrito"
   renderAll();
 }
 
@@ -1148,22 +1157,30 @@ function topeLinea(idx){
 function repartirStockCotiz(){
   var tomado={};
   COTIZ.forEach(function(e){
-    if(e.off){ e.dup=false; e.disp=0; return; }
+    if(e.off){ e.dup=false; e.disp=0; e.motivo=null; return; }
     var k=e.found[0]+'|'+e.idioma;
     var stk=getStock(e.found,e.idioma);
     var prc=getPrecio(e.found,e.idioma);
-    if(tomado[k]===undefined) tomado[k]=enCarritoDe(e.found[0],e.idioma);
+    var enCar=enCarritoDe(e.found[0],e.idioma);
+    if(tomado[k]===undefined) tomado[k]=enCar;
     var ya=tomado[k];
     var libre=Math.max(0, stk-ya);
+
     if(stk===0||prc===0){
-      e.disp=0; e.estado='sin'; e.dup=false; return;
+      e.disp=0; e.estado='sin'; e.dup=false; e.motivo='sinstock'; return;
     }
-    // respeta un ajuste manual del usuario si cabe
     var quiere=(e.dispManual!=null)?e.dispManual:e.item.qty;
     e.disp=Math.min(quiere, libre);
     tomado[k]=ya+e.disp;
-    e.dup=(ya>enCarritoDe(e.found[0],e.idioma));  // otra linea ya tomo de esta carta
+    e.dup=(ya>enCar);                       // otra linea de la lista ya tomo de esta carta
     e.estado=(e.disp===0)?'sin':(e.disp>=e.item.qty?'ok':'parcial');
+    // Si quedo en 0, distinguir el motivo real: no es lo mismo
+    // "no tengo stock" que "ya lo tienes tu en el carrito".
+    if(e.disp===0){
+      if(e.dup) e.motivo='dup';
+      else if(enCar>0) e.motivo='carrito';
+      else e.motivo='sinstock';
+    } else e.motivo=null;
   });
 }
 
@@ -1176,14 +1193,12 @@ function renderCotizacion(){
   // Las que tienen stock se muestran completas con miniatura.
   // Las agotadas van en un listado compacto: ocupan menos y dejan
   // claro que "esta falto, pero puedes llevar el resto".
-  var conStock=[], agotadas=[], repetidas=[];
+  var conStock=[], agotadas=[], repetidas=[], yaTenias=[];
   COTIZ.forEach(function(e,idx){
     if(e.off) return;   // agregadas o quitadas van en sus propias secciones
     if(e.estado!=='sin'){ conStock.push({e:e,idx:idx}); return; }
-    // disp=0 puede ser por dos motivos MUY distintos:
-    //  - dup: otra linea de la lista ya se llevo todo el stock
-    //  - sin stock real de la carta
-    if(e.dup) repetidas.push({e:e,idx:idx});
+    if(e.motivo==='dup') repetidas.push({e:e,idx:idx});
+    else if(e.motivo==='carrito') yaTenias.push({e:e,idx:idx});
     else agotadas.push({e:e,idx:idx});
   });
 
@@ -1205,6 +1220,22 @@ function renderCotizacion(){
         +'</div>';
     });
     h+='<div class="ag-nota">Escribiste esta carta en mas de una linea. Se cuenta una sola vez, hasta donde alcanza el stock.</div></div>';
+  }
+
+  if(yaTenias.length){
+    h+='<div class="sec-label" style="color:var(--green)">Ya las tienes en el carrito \u00B7 '+yaTenias.length+'</div>';
+    h+='<div class="ag-box">';
+    yaTenias.forEach(function(o){
+      var r=o.e.found;
+      var enCar=(CARRITO.find(function(c){return c.cardId===r[0]&&c.idioma===o.e.idioma;})||{}).qty||0;
+      h+='<div class="ag-row">'
+        +'<div class="ag-info"><span class="ag-nom">'+escHtml(r[1])+'</span>'
+        +'<span class="ag-meta">'+r[2].toUpperCase()+' '+r[3]+' \u00B7 '+r[4]+' \u00B7 ya tienes '+enCar+' de '+getStock(r,o.e.idioma)+'</span></div>'
+        +'<span class="ag-qty">x'+o.e.item.qty+'</span>'
+        +'<button class="ri-x" onclick="toggleOffCotiz('+o.idx+')" title="Quitar de la lista">\u2715</button>'
+        +'</div>';
+    });
+    h+='<div class="ag-nota">Tu carrito ya tiene todas las unidades disponibles de estas cartas.</div></div>';
   }
 
   if(agotadas.length){
@@ -1261,6 +1292,21 @@ function renderCotizacion(){
   h+=buildResumenPK();
   cont.innerHTML=h;
   actualizarFooterLista();
+}
+
+// Cualquier cambio del carrito (grilla, carrito lateral, checkout) invalida
+// el reparto de stock de la cotizacion: hay que recalcularlo o el listado
+// mostraria cantidades que ya no caben.
+var _SYNC_COTIZ=false;
+function sincronizarCotizacion(){
+  if(_SYNC_COTIZ) return;          // evita recursion con renderCotizacion
+  _SYNC_COTIZ=true;
+  try{
+    if(COTIZ.length) repartirStockCotiz();
+    var pl=document.getElementById('paste-panel');
+    if(pl&&pl.classList.contains('show')&&(COTIZ.length||COTIZ_NOPE.length)) renderCotizacion();
+    else actualizarFooterLista();
+  } finally { _SYNC_COTIZ=false; }
 }
 
 // El pie del listado nunca debe quedar vacio si el cliente ya tiene algo
@@ -1371,33 +1417,49 @@ function buildRiPK(e,idx){
 }
 
 function buildResumenPK(){
+  // IMPORTANTE: este resumen habla SOLO de la lista pegada ahora.
+  // Antes mostraba el total del carrito completo, asi que despues de
+  // "Limpiar" y cotizar una lista nueva seguia apareciendo el monto de
+  // la lista anterior. El estado del carrito va en su propia franja,
+  // claramente rotulada, para que no se confundan.
   var act=COTIZ.filter(function(e){return !e.off;});
   var enc=act.reduce(function(s,e){return s+e.disp;},0);
-  var yaCarrito=COTIZ.reduce(function(s,e){return s+(e.agregada?(e.enCarrito||0):0);},0);
-  var ped=COTIZ.reduce(function(s,e){return s+(e.agregada?0:e.item.qty);},0)
-         +COTIZ_NOPE.reduce(function(s,d){return s+d.qty;},0);
-  var falt=Math.max(0, ped-enc);
-  var totAgregar=act.reduce(function(s,e){return s+e.disp*getPrecio(e.found,e.idioma);},0);
-  var totCarrito=CARRITO.reduce(function(s,c){return s+c.precio*c.qty;},0);
-  var unidadesCarrito=CARRITO.reduce(function(s,c){return s+c.qty;},0);
+  var yaDeEstaLista=COTIZ.reduce(function(s,e){return s+(e.agregada?(e.enCarrito||0):0);},0);
+  var totalAgregar=act.reduce(function(s,e){return s+e.disp*getPrecio(e.found,e.idioma);},0);
+  var totalYaAgregado=COTIZ.reduce(function(s,e){
+    return s+(e.agregada?((e.enCarrito||0)*getPrecio(e.found,e.idioma)):0);},0);
 
-  var h='<div class="sum-card"><div class="sum-title">Resumen</div>';
-  if(unidadesCarrito>0)
-    h+='<div class="sum-line"><span>Ya en tu carrito</span><strong style="color:var(--green)">'+unidadesCarrito+' carta(s)</strong></div>';
+  var pedido=COTIZ.reduce(function(s,e){return s+e.item.qty;},0)
+            +COTIZ_NOPE.reduce(function(s,d){return s+d.qty;},0);
+  var yaTenias=COTIZ.reduce(function(s,e){return s+((!e.off&&e.motivo==='carrito')?e.item.qty:0);},0);
+  var falt=Math.max(0, pedido-enc-yaDeEstaLista-yaTenias);
+
+  var h='<div class="sum-card"><div class="sum-title">Resumen de tu lista</div>';
+  h+='<div class="sum-line"><span>Pediste</span><strong>'+pedido+' carta(s)</strong></div>';
+  if(yaDeEstaLista>0)
+    h+='<div class="sum-line"><span>Ya agregadas al carrito</span><strong style="color:var(--green)">'+yaDeEstaLista+'</strong></div>';
+  if(yaTenias>0)
+    h+='<div class="sum-line"><span>Ya las tenias en el carrito</span><strong style="color:var(--green)">'+yaTenias+'</strong></div>';
+  if(enc>0)
+    h+='<div class="sum-line"><span>Listas para agregar</span><strong>'+enc+'</strong></div>';
   if(falt>0)
     h+='<div class="sum-line"><span>No disponibles</span><strong>'+falt+'</strong></div>';
 
-  if(enc>0){
-    // Todavia queda algo por agregar: el total relevante es ese.
-    h+='<div class="sum-line"><span>Por agregar</span><strong>'+enc+' de '+ped+'</strong></div>';
-    h+='<div class="sum-line sum-total"><span>Total por agregar</span><strong>'+clp(totAgregar)+'</strong></div>';
-  } else if(unidadesCarrito>0){
-    // Nada pendiente: mostrar el total real del carrito, no un $0 sin sentido.
-    h+='<div class="sum-line sum-total"><span>Total en tu carrito</span><strong>'+clp(totCarrito)+'</strong></div>';
-  } else {
+  if(enc>0)
+    h+='<div class="sum-line sum-total"><span>Total por agregar</span><strong>'+clp(totalAgregar)+'</strong></div>';
+  else if(yaDeEstaLista>0)
+    h+='<div class="sum-line sum-total"><span>Total de esta lista</span><strong>'+clp(totalYaAgregado)+'</strong></div>';
+  else
     h+='<div class="sum-line sum-total"><span>Total</span><strong>'+clp(0)+'</strong></div>';
-  }
   h+='</div>';
+
+  // Franja aparte con el estado del carrito completo
+  var unidadesCarrito=CARRITO.reduce(function(s,c){return s+c.qty;},0);
+  if(unidadesCarrito>0){
+    var totalCarrito=CARRITO.reduce(function(s,c){return s+c.precio*c.qty;},0);
+    h+='<div class="carrito-strip"><span>Tu carrito completo</span>'
+      +'<span><strong>'+unidadesCarrito+' carta(s)</strong> \u00B7 '+clp(totalCarrito)+'</span></div>';
+  }
   return h;
 }
 
