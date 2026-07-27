@@ -330,7 +330,7 @@ header p{font-size:.75rem;color:var(--txm);margin-top:1px}
       <div id="paste-resultado"></div>
     </div>
     <div class="cart-footer" id="lista-footer" style="display:none">
-      <button class="cart-ig-btn" style="background:var(--accent);color:var(--accent-text)" onclick="agregarCotizacionAlCarrito()">Agregar todo al carrito</button>
+      <button class="cart-ig-btn" id="lista-btn" style="background:var(--accent);color:var(--accent-text)" onclick="agregarCotizacionAlCarrito()">Agregar todo al carrito</button>
     </div>
   </div>
 </div>
@@ -904,6 +904,8 @@ function actualizarCarritoBtn(){
   // formulario, repintar borraria los datos que el cliente ya escribio.
   var panel=document.getElementById('carrito-panel');
   if(panel&&panel.classList.contains('show')&&CHECKOUT_VIEW==='cart') renderCarritoPanel();
+  var pl=document.getElementById('paste-panel');
+  if(pl&&pl.classList.contains('show')) actualizarFooterLista();
 }
 
 /* ===================== PEGAR LISTADO ===================== */
@@ -911,8 +913,8 @@ function abrirPegarListado(){
   document.getElementById('paste-panel').classList.add('show');
   if(!COTIZ.length&&!COTIZ_NOPE.length){
     document.getElementById('paste-resultado').innerHTML='';
-    document.getElementById('lista-footer').style.display='none';
   }
+  actualizarFooterLista();
 }
 function cerrarPegarListado(){
   document.getElementById('paste-panel').classList.remove('show');
@@ -1258,7 +1260,33 @@ function renderCotizacion(){
 
   h+=buildResumenPK();
   cont.innerHTML=h;
-  document.getElementById('lista-footer').style.display=COTIZ.some(function(e){return !e.off&&e.disp>0;})?'block':'none';
+  actualizarFooterLista();
+}
+
+// El pie del listado nunca debe quedar vacio si el cliente ya tiene algo
+// en el carrito: sin boton, quedaba sin forma de avanzar.
+function actualizarFooterLista(){
+  var foot=document.getElementById('lista-footer');
+  var btn=document.getElementById('lista-btn');
+  if(!foot||!btn) return;
+  var porAgregar=COTIZ.some(function(e){return !e.off&&e.disp>0;});
+  var enCarrito=CARRITO.reduce(function(s,c){return s+c.qty;},0);
+  if(porAgregar){
+    foot.style.display='block';
+    btn.textContent='Agregar todo al carrito';
+    btn.setAttribute('onclick','agregarCotizacionAlCarrito()');
+  } else if(enCarrito>0){
+    foot.style.display='block';
+    btn.textContent='Ir al carrito \u2192';
+    btn.setAttribute('onclick','irAlCarritoDesdeLista()');
+  } else {
+    foot.style.display='none';
+  }
+}
+function irAlCarritoDesdeLista(){
+  cerrarPegarListado();
+  VINO_DEL_LISTADO=true;
+  abrirCarrito();
 }
 
 function escHtml(t){
@@ -1346,19 +1374,30 @@ function buildResumenPK(){
   var act=COTIZ.filter(function(e){return !e.off;});
   var enc=act.reduce(function(s,e){return s+e.disp;},0);
   var yaCarrito=COTIZ.reduce(function(s,e){return s+(e.agregada?(e.enCarrito||0):0);},0);
-  // Lo pedido excluye lo que ya paso al carrito, para que el resumen
-  // no diga "0 de N" despues de agregar.
   var ped=COTIZ.reduce(function(s,e){return s+(e.agregada?0:e.item.qty);},0)
          +COTIZ_NOPE.reduce(function(s,d){return s+d.qty;},0);
   var falt=Math.max(0, ped-enc);
-  var tot=act.reduce(function(s,e){return s+e.disp*getPrecio(e.found,e.idioma);},0);
+  var totAgregar=act.reduce(function(s,e){return s+e.disp*getPrecio(e.found,e.idioma);},0);
+  var totCarrito=CARRITO.reduce(function(s,c){return s+c.precio*c.qty;},0);
+  var unidadesCarrito=CARRITO.reduce(function(s,c){return s+c.qty;},0);
+
   var h='<div class="sum-card"><div class="sum-title">Resumen</div>';
-  if(yaCarrito>0) h+='<div class="sum-line"><span>Ya en tu carrito</span><strong style="color:var(--green)">'+yaCarrito+'</strong></div>';
-  if(ped>0){
+  if(unidadesCarrito>0)
+    h+='<div class="sum-line"><span>Ya en tu carrito</span><strong style="color:var(--green)">'+unidadesCarrito+' carta(s)</strong></div>';
+  if(falt>0)
+    h+='<div class="sum-line"><span>No disponibles</span><strong>'+falt+'</strong></div>';
+
+  if(enc>0){
+    // Todavia queda algo por agregar: el total relevante es ese.
     h+='<div class="sum-line"><span>Por agregar</span><strong>'+enc+' de '+ped+'</strong></div>';
-    if(falt>0) h+='<div class="sum-line"><span>No disponibles</span><strong>'+falt+'</strong></div>';
+    h+='<div class="sum-line sum-total"><span>Total por agregar</span><strong>'+clp(totAgregar)+'</strong></div>';
+  } else if(unidadesCarrito>0){
+    // Nada pendiente: mostrar el total real del carrito, no un $0 sin sentido.
+    h+='<div class="sum-line sum-total"><span>Total en tu carrito</span><strong>'+clp(totCarrito)+'</strong></div>';
+  } else {
+    h+='<div class="sum-line sum-total"><span>Total</span><strong>'+clp(0)+'</strong></div>';
   }
-  h+='<div class="sum-line sum-total"><span>Total por agregar</span><strong>'+clp(tot)+'</strong></div></div>';
+  h+='</div>';
   return h;
 }
 
@@ -1419,24 +1458,7 @@ function agregarCotizacionAlCarrito(){
   actualizarCarritoBtn();
   renderAll();
   renderCotizacion();          // el panel debe reflejar que ya se agregaron
-  if(n===0){
-    // Nada nuevo que agregar: se avisa y NO se cierra el panel, para no
-    // dejar al usuario tirado en la grilla sin explicacion.
-    var cont=document.getElementById('paste-resultado');
-    var av=document.getElementById('cotiz-aviso');
-    if(!av&&cont){
-      av=document.createElement('div');
-      av.id='cotiz-aviso';
-      av.className='cotiz-aviso';
-      cont.parentElement.insertBefore(av,cont);
-    }
-    if(av){
-      av.textContent='Todo lo disponible de esta lista ya esta en tu carrito.';
-      av.style.display='block';
-      setTimeout(function(){ if(av) av.style.display='none'; },3500);
-    }
-    return;
-  }
+  if(n===0) return;   // el pie ya ofrece "Ir al carrito"; no se cierra el panel
   cerrarPegarListado();
   VINO_DEL_LISTADO=true;
   abrirCarrito();
