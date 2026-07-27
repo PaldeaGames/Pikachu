@@ -129,6 +129,9 @@ header p{font-size:.75rem;color:var(--txm);margin-top:1px}
 .qty-btn:disabled{opacity:.3;cursor:not-allowed}
 .qty-num{font-size:13px;font-weight:700;min-width:18px;text-align:center;color:var(--tx)}
 .stk-disp{font-size:.64rem;color:var(--txm);margin-top:2px}
+.qty-num.qty-max{color:var(--red)!important;font-weight:800}
+.qty-btn-max{border-color:var(--red)!important;color:var(--red)!important;opacity:1!important;background:rgba(255,77,77,.12)!important}
+.qty-btn-max:disabled{opacity:1!important}
 .agotado-badge{display:inline-block;font-size:.64rem;font-weight:700;padding:2px 7px;border-radius:8px;background:rgba(255,80,80,.12);color:var(--red);margin-top:4px}
 .tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .tbl{width:100%;border-collapse:collapse;font-size:.83rem}
@@ -322,13 +325,23 @@ function esBrillo(rareza){
   return RAREZAS_BRILLO.indexOf(String(rareza).toUpperCase())>=0;
 }
 
-// Cadena de candidatos: nombre exacto -> base sin rareza -> variante NRML del mismo img_id
-function imgCandidatos(r){
+// Cadena de candidatos por carta:
+//  1. nombre con su propia rareza
+//  2. nombre base sin sufijo de rareza
+//  3. nombre con NRML
+//  4. nombre con CUALQUIER otra rareza presente en el mismo img_id
+// Asi una variante sin archivo propio cae en la imagen de su hermana
+// (ej: TRT23 sin archivo usa la de TRT24; la unica diferencia visual
+//  entre variantes es el efecto de brillo, que es CSS).
+function imgCandidatos(r,rarezasHermanas){
   var imgId=r[8], nombre=r[1], codSet=r[2], numero=r[3], rareza=r[4];
   var c=[];
   c.push(IMG_BASE+nombreArchivoImg(imgId,nombre,codSet,numero,true,rareza));
   c.push(IMG_BASE+nombreArchivoImg(imgId,nombre,codSet,numero,false,''));
   c.push(IMG_BASE+nombreArchivoImg(imgId,nombre,codSet,numero,true,'NRML'));
+  (rarezasHermanas||[]).forEach(function(rn){
+    c.push(IMG_BASE+nombreArchivoImg(imgId,nombre,codSet,numero,true,rn));
+  });
   var out=[];
   c.forEach(function(u){if(out.indexOf(u)<0)out.push(u);});
   return out;
@@ -336,6 +349,13 @@ function imgCandidatos(r){
 function imgUrlFor(r){
   var c=IMG_CAND[r[0]];
   return (c&&c.length)?c[0]:null;
+}
+// onerror para miniaturas del carrito: recorre la cadena y si falla, oculta
+function imgFallbackCart(el,uid,idx){
+  var c=IMG_CAND[uid]||[];
+  var next=idx+1;
+  if(next<c.length){ el.setAttribute('data-idx',next); el.src=c[next]; return; }
+  el.onerror=null; el.style.display='none';
 }
 // onerror encadenado: avanza al siguiente candidato
 function imgFallback(el,uid,idx){
@@ -441,9 +461,6 @@ async function syncGAS(){
 
       CARDS.push([uid,nombre,codSet,numero,rareza,codInt,setNombre,'',imgId,multi,String(it.categoria||'').trim()]);
 
-      IMG_CAND[uid]=imgCandidatos([uid,nombre,codSet,numero,rareza,codInt,setNombre,'',imgId,multi]);
-      IMGS[uid]=IMG_CAND[uid][0];
-
       IDIOMAS.forEach(function(idm){
         var lo=idm.toLowerCase();
         var s=parseInt(it['stk_'+lo],10)||0;
@@ -456,6 +473,18 @@ async function syncGAS(){
     if(!RAREZAS.length){
       CARDS.forEach(function(c){if(c[4]&&RAREZAS.indexOf(c[4])<0)RAREZAS.push(c[4]);});
     }
+
+    // segunda pasada: rarezas hermanas por img_id -> cadena de imagenes
+    var porImg={};
+    CARDS.forEach(function(c){
+      if(!porImg[c[8]]) porImg[c[8]]=[];
+      if(porImg[c[8]].indexOf(c[4])<0) porImg[c[8]].push(c[4]);
+    });
+    CARDS.forEach(function(c){
+      var hermanas=(porImg[c[8]]||[]).filter(function(rn){return rn!==c[4];});
+      IMG_CAND[c[0]]=imgCandidatos(c,hermanas);
+      IMGS[c[0]]=IMG_CAND[c[0]][0];
+    });
 
     GAS_LOADED=true;
     bar.textContent=CARDS.length+' variantes cargadas';
@@ -666,13 +695,13 @@ function buildCardHtml(r){
 
   var precioHtml='';
   if(GAS_LOADED&&!agotado){
+    var tope=(qty>0&&qty>=stk);
     precioHtml='<div class="precio-row">'
-      +'<div><div class="precio-val">'+(precio>0?clp(precio):'Sin precio')+'</div>'
-      +'<div class="stk-disp">'+stk+' disp.</div></div>'
-      +'<div class="qty-wrap">'
-      +'<button class="qty-btn" onclick="cambiarQty('+r[0]+','+(qty>0?-1:0)+',\''+idioma+'\')" '+(qty===0?'disabled':'')+'>-</button>'
-      +'<span class="qty-num" style="color:'+(qty>0?'var(--accent)':'var(--txm)')+'">'+qty+'</span>'
-      +'<button class="qty-btn" onclick="cambiarQty('+r[0]+',1,\''+idioma+'\')" '+(qty>=stk||precio===0?'disabled':'')+'>+</button>'
+      +'<div><div class="precio-val">'+(precio>0?clp(precio):'Sin precio')+'</div></div>'
+      +'<div class="qty-wrap" id="qw-'+r[0]+'">'
+      +'<button class="qty-btn" onclick="cambiarQty('+r[0]+',-1,\''+idioma+'\')" '+(qty===0?'disabled':'')+'>-</button>'
+      +'<span class="qty-num'+(tope?' qty-max':'')+'" style="color:'+(tope?'var(--red)':(qty>0?'var(--accent)':'var(--txm)'))+'">'+qty+'</span>'
+      +'<button class="qty-btn'+(tope?' qty-btn-max':'')+'" onclick="cambiarQty('+r[0]+',1,\''+idioma+'\')" '+(qty>=stk||precio===0?'disabled':'')+' title="'+(tope?'Maximo disponible: '+stk:'')+'">'+(tope?'\u2205':'+')+'</button>'
       +'</div></div>';
   }
 
@@ -740,10 +769,11 @@ function buildRowHtml(r){
     if(stk>0&&prc>0){
       var en=CARRITO.find(function(c){return c.cardId===r[0]&&c.idioma===idioma;});
       var q=en?en.qty:0;
-      cartCell='<div class="qty-wrap">'
-        +'<button class="qty-btn" onclick="cambiarQty('+r[0]+','+(q>0?-1:0)+',\''+idioma+'\')" '+(q===0?'disabled':'')+'>-</button>'
-        +'<span class="qty-num">'+q+'</span>'
-        +'<button class="qty-btn" onclick="cambiarQty('+r[0]+',1,\''+idioma+'\')" '+(q>=stk?'disabled':'')+'>+</button></div>';
+      var topeT=(q>0&&q>=stk);
+      cartCell='<div class="qty-wrap" id="qwt-'+r[0]+'">'
+        +'<button class="qty-btn" onclick="cambiarQty('+r[0]+',-1,\''+idioma+'\')" '+(q===0?'disabled':'')+'>-</button>'
+        +'<span class="qty-num'+(topeT?' qty-max':'')+'">'+q+'</span>'
+        +'<button class="qty-btn'+(topeT?' qty-btn-max':'')+'" onclick="cambiarQty('+r[0]+',1,\''+idioma+'\')" '+(q>=stk?'disabled':'')+'>'+(topeT?'\u2205':'+')+'</button></div>';
     }
   }
 
@@ -769,7 +799,40 @@ function cambiarQty(uid,delta,idioma){
     CARRITO.push({cardId:uid,nombre:r[1],rareza:r[4],idioma:idioma,precio:precio,qty:1,img:imgUrlFor(r),set:r[2]||'',setNombre:r[6]||'',num:r[3]||''});
   }
   actualizarCarritoBtn();
-  renderCard(uid);
+  parchearQty(uid,idioma);
+}
+
+// Actualiza SOLO el contador y los botones, sin tocar el <img>.
+// Re-renderizar la tarjeta completa recargaba la imagen y producia
+// el parpadeo negro al pulsar + / -.
+function parchearQty(uid,idioma){
+  var r=CARDS.find(function(c){return c[0]===uid;});
+  if(!r) return;
+  var stk=getStock(r,idioma), precio=getPrecio(r,idioma);
+  var en=CARRITO.find(function(c){return c.cardId===uid&&c.idioma===idioma;});
+  var qty=en?en.qty:0;
+  var tope=(qty>0&&qty>=stk);
+  var wraps=[document.getElementById('qw-'+uid),document.getElementById('qwt-'+uid)];
+  var pintado=false;
+  wraps.forEach(function(w){
+    if(!w) return;
+    pintado=true;
+    var btns=w.getElementsByTagName('button');
+    var num=w.getElementsByClassName('qty-num')[0];
+    if(num){
+      num.textContent=qty;
+      num.className='qty-num'+(tope?' qty-max':'');
+      num.style.color=tope?'var(--red)':(qty>0?'var(--accent)':'var(--txm)');
+    }
+    if(btns[0]) btns[0].disabled=(qty===0);
+    if(btns[1]){
+      btns[1].disabled=(qty>=stk||precio===0);
+      btns[1].className='qty-btn'+(tope?' qty-btn-max':'');
+      btns[1].textContent=tope?'\u2205':'+';
+      btns[1].title=tope?('Maximo disponible: '+stk):'';
+    }
+  });
+  if(!pintado) renderCard(uid);
 }
 
 function actualizarCarritoBtn(){
@@ -885,8 +948,11 @@ function renderVistaCarrito(){
   CARRITO.forEach(function(c){
     var sub=c.precio*c.qty;
     total+=sub;
+    var cr=CARDS.find(function(x){return x[0]===c.cardId;});
+    var stkC=cr?getStock(cr,c.idioma):c.qty;
+    var topeC=(c.qty>=stkC);
     h+='<div class="cart-item">';
-    if(c.img) h+='<img src="'+c.img+'" alt="'+c.nombre+'" onerror="this.style.display=\'none\'">';
+    if(c.img) h+='<img src="'+c.img+'" alt="'+c.nombre+'" data-idx="0" onerror="imgFallbackCart(this,'+c.cardId+',parseInt(this.getAttribute(\'data-idx\'),10))">';
     h+='<div class="cart-item-info">'
       +'<div class="cart-item-name">'+c.nombre+'</div>'
       +'<div class="cart-item-meta">'+c.rareza+' - '+c.idioma+' - '+(c.set||'\u2014')+' '+(c.num||'')+'</div>'
@@ -896,8 +962,8 @@ function renderVistaCarrito(){
       +'<div class="cart-item-price">'+clp(sub)+'</div>'
       +'<div class="qty-wrap" style="margin-top:4px;justify-content:flex-end">'
       +'<button class="qty-btn" onclick="cambiarQtyCart('+c.cardId+',\''+c.idioma+'\',-1)">-</button>'
-      +'<span class="qty-num">'+c.qty+'</span>'
-      +'<button class="qty-btn" onclick="cambiarQtyCart('+c.cardId+',\''+c.idioma+'\',1)">+</button>'
+      +'<span class="qty-num'+(topeC?' qty-max':'')+'">'+c.qty+'</span>'
+      +'<button class="qty-btn'+(topeC?' qty-btn-max':'')+'" onclick="cambiarQtyCart('+c.cardId+',\''+c.idioma+'\',1)" '+(topeC?'disabled title="Maximo disponible: '+stkC+'"':'')+'>'+(topeC?'\u2205':'+')+'</button>'
       +'</div></div>'
       +'<button class="cart-remove" onclick="quitarCart('+c.cardId+',\''+c.idioma+'\')">x</button>'
       +'</div>';
@@ -945,8 +1011,7 @@ function renderVistaFormulario(){
     +'<br><a href="https://maps.app.goo.gl/iuDSCBxPxVADgiUKA" target="_blank" class="retiro-link">Ver referencia en el mapa &rarr;</a></div>'
     +'<div class="row2" style="margin-top:12px">'
     +'<div class="field"><label>Dia preferido <span class="req">*</span></label>'
-    +'<select id="ck-retiroDia" onchange="actualizarHorasRetiroPK()"><option value="">Elige un dia</option>'
-    +'<option>Lunes</option><option>Martes</option><option>Miercoles</option><option>Jueves</option><option>Viernes</option><option>Sabado</option></select>'
+    +'<select id="ck-retiroDia" onchange="actualizarHorasRetiroPK()">'+opcionesDiasRetiroPK()+'</select>'
     +'<div class="field-error" id="err-ck-retiroDia">Elige un dia.</div></div>'
     +'<div class="field"><label>Hora preferida <span class="req">*</span></label>'
     +'<select id="ck-retiroHora"><option value="">Elige una hora</option>'
@@ -1014,6 +1079,29 @@ function renderVistaFormulario(){
     +'</div>';
 }
 
+// Dias de retiro con fecha real: proximos 12 dias habiles (lunes a sabado),
+// partiendo de manana. El value guarda "Lunes 27-07-2026" para la hoja.
+var DIAS_SEM=['Domingo','Lunes','Martes','Miercoles','Jueves','Viernes','Sabado'];
+var MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function opcionesDiasRetiroPK(){
+  var hoy=new Date();
+  var html='<option value="">Elige un dia</option>';
+  var n=0;
+  for(var i=1;i<=20&&n<12;i++){
+    var d=new Date(hoy.getFullYear(),hoy.getMonth(),hoy.getDate()+i);
+    if(d.getDay()===0) continue; // domingo cerrado
+    var nom=DIAS_SEM[d.getDay()];
+    var dd=String(d.getDate()).padStart(2,'0');
+    var mm=String(d.getMonth()+1).padStart(2,'0');
+    var val=nom+' '+dd+'-'+mm+'-'+d.getFullYear();
+    var label=nom+' '+d.getDate()+' de '+MESES[d.getMonth()];
+    if(n===0) label+=' (manana)';
+    html+='<option value="'+val+'" data-dow="'+nom+'">'+label+'</option>';
+    n++;
+  }
+  return html;
+}
+
 function setEntregaPK(modo){
   entregaMode=modo;
   document.getElementById('ck-btnRetiro').className='toggle-btn'+(modo==='retiro'?' active-retiro':'');
@@ -1049,10 +1137,12 @@ function usarMismoCorreoPK(){
 }
 
 function actualizarHorasRetiroPK(){
-  var dia=document.getElementById('ck-retiroDia').value;
+  var selDia=document.getElementById('ck-retiroDia');
+  var opt=selDia?selDia.options[selDia.selectedIndex]:null;
+  var dow=opt?(opt.getAttribute('data-dow')||''):'';
   var sel=document.getElementById('ck-retiroHora');
   if(!sel) return;
-  var max=(dia==='Sabado')?'14:00':'18:00';
+  var max=(dow==='Sabado')?'14:00':'18:00';
   var todas=['10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00','17:30','18:00'];
   var html='<option value="">Elige una hora</option>';
   todas.forEach(function(h){ if(h<=max) html+='<option>'+h+'</option>'; });
