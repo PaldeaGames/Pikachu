@@ -499,7 +499,7 @@ async function syncGAS(){
     RAREZAS=[];
     (json.rarezas||[]).forEach(function(r){var u=String(r).trim();if(u&&RAREZAS.indexOf(u)<0)RAREZAS.push(u);});
 
-    CARDS=[]; STOCK={}; PRICES={}; IMGS={};
+    CARDS=[]; STOCK={}; PRICES={}; IMGS={}; IMG_CAND={}; CARD_IDIOMA={};
     var uid=0;
     json.data.forEach(function(it){
       uid++;
@@ -662,10 +662,12 @@ function limpiarFiltros(){
 }
 
 function filtered(){
-  var toks=QF.toLowerCase().trim().split(/\s+/).filter(Boolean);
+  // Misma normalizacion que el cotizador (sin acentos, numero corto incluido)
+  // para que "Pokemon" y "Pokémon", o "49" y "49/203", encuentren lo mismo.
+  var toks=normPK(QF).trim().split(/\s+/).filter(Boolean);
   var base=LISTADO_IDS?CARDS.filter(function(r){return LISTADO_IDS.indexOf(r[0])>=0;}):CARDS;
   var rows=base.filter(function(r){
-    var buscable=(r[1]+' '+r[2]+' '+r[6]+' '+r[3]+' '+r[5]+' '+r[4]).toLowerCase();
+    var buscable=buscablePK(r);
     var matchQ=!toks.length||toks.every(function(t){return buscable.indexOf(t)>=0;});
     var matchV=!VF||r[4]===VF;
     var matchS=!SF||(r[6]||'').trim()===SF;
@@ -676,9 +678,7 @@ function filtered(){
     return matchQ&&matchV&&matchS&&matchL&&matchDisp;
   });
 
-  if(ORDF==='precio-asc'||ORDF==='precio-desc'){
-    rows=rows.filter(function(r){return idiomasDisponibles(r).length>0;});
-  }
+  // Ordenar NO debe filtrar: las sin precio se mandan al final.
   if(ORDF==='az'){
     rows.sort(function(a,b){return a[1].localeCompare(b[1])||a[6].localeCompare(b[6]);});
   } else if(ORDF==='precio-asc'||ORDF==='precio-desc'){
@@ -721,7 +721,7 @@ function buildCardHtml(r){
   var idioma=idiomaActivo(r);
   var url=imgUrlFor(r);
   var imgHtml=url
-    ?'<img src="'+url+'" alt="'+r[1]+'" data-idx="0" style="width:100%;height:auto;display:block" onerror="imgFallback(this,'+r[0]+',parseInt(this.getAttribute(\'data-idx\'),10))">'
+    ?'<img src="'+url+'" alt="'+escHtml(r[1])+'" data-idx="0" style="width:100%;height:auto;display:block" onerror="imgFallback(this,'+r[0]+',parseInt(this.getAttribute(\'data-idx\'),10))">'
     :'<div class="ph">Sin imagen</div>';
 
   var disp=idiomasDisponibles(r);
@@ -765,9 +765,9 @@ function buildCardHtml(r){
     +'<div class="imgw">'+imgHtml+agotadoOverlay+'</div>'
     +vbdgHtml
     +'<div class="info">'
-    +'<div class="pn">'+r[1]+'</div>'
-    +'<div class="sn">'+r[6]+'</div>'
-    +'<div class="cn">'+(r[2]||'\u2014')+' - '+(r[3]||'\u2014')+'</div>'
+    +'<div class="pn">'+escHtml(r[1])+'</div>'
+    +'<div class="sn">'+escHtml(r[6])+'</div>'
+    +'<div class="cn">'+escHtml(r[2]||'\u2014')+' - '+escHtml(r[3]||'\u2014')+'</div>'
     +langHtml
     +precioHtml
     +'</div></div>';
@@ -801,7 +801,7 @@ function renderTable(rows,cont){
 function buildRowHtml(r){
   var idioma=idiomaActivo(r);
   var url=imgUrlFor(r);
-  var imgHtml=url?'<img src="'+url+'" alt="'+r[1]+'" data-idx="0" style="width:44px;border-radius:4px" onerror="imgFallback(this,'+r[0]+',parseInt(this.getAttribute(\'data-idx\'),10))">':'\u2014';
+  var imgHtml=url?'<img src="'+url+'" alt="'+escHtml(r[1])+'" data-idx="0" style="width:44px;border-radius:4px" onerror="imgFallback(this,'+r[0]+',parseInt(this.getAttribute(\'data-idx\'),10))">':'\u2014';
 
   var langCell='\u2014',precioCell='\u2014',stkCell='\u2014',cartCell='';
   if(GAS_LOADED){
@@ -831,8 +831,8 @@ function buildRowHtml(r){
   }
 
   return '<td>'+imgHtml+'</td>'
-    +'<td><strong>'+r[1]+'</strong></td>'
-    +'<td style="font-size:.78rem;color:var(--txm)">'+r[6]+'</td>'
+    +'<td><strong>'+escHtml(r[1])+'</strong></td>'
+    +'<td style="font-size:.78rem;color:var(--txm)">'+escHtml(r[6])+'</td>'
     +'<td><span class="vbdg '+vCls(r[4])+'" style="position:static;display:inline-block">'+vIcon(r[4])+r[4]+'</span></td>'
     +(GAS_LOADED?'<td>'+langCell+'</td><td>'+precioCell+'</td><td>'+stkCell+'</td><td>'+cartCell+'</td>':'');
 }
@@ -861,6 +861,10 @@ function cambiarQty(uid,delta,idioma){
 function parchearQty(uid,idioma){
   var r=CARDS.find(function(c){return c[0]===uid;});
   if(!r) return;
+  // La tarjeta de la grilla muestra UN idioma. Si el cambio vino del
+  // carrito para otro idioma, parchear escribiria la cantidad
+  // equivocada sobre el contador visible: en ese caso se re-renderiza.
+  if(idiomaActivo(r)!==idioma){ renderCard(uid); return; }
   var stk=getStock(r,idioma), precio=getPrecio(r,idioma);
   var en=CARRITO.find(function(c){return c.cardId===uid&&c.idioma===idioma;});
   var qty=en?en.qty:0;
@@ -891,9 +895,14 @@ function parchearQty(uid,idioma){
 function actualizarCarritoBtn(){
   var total=CARRITO.reduce(function(s,c){return s+c.qty;},0);
   var cnt=document.getElementById('cart-count');
-  cnt.textContent=total;
-  cnt.className='cart-count'+(total===0?' zero':'');
-  if(document.getElementById('carrito-panel').classList.contains('show')) renderCarritoPanel();
+  if(cnt){
+    cnt.textContent=total;
+    cnt.className='cart-count'+(total===0?' zero':'');
+  }
+  // Solo se repinta si el panel esta mostrando el CARRITO. Si esta en el
+  // formulario, repintar borraria los datos que el cliente ya escribio.
+  var panel=document.getElementById('carrito-panel');
+  if(panel&&panel.classList.contains('show')&&CHECKOUT_VIEW==='cart') renderCarritoPanel();
 }
 
 /* ===================== PEGAR LISTADO ===================== */
@@ -1084,7 +1093,14 @@ function cotizarListaPK(){
     });
   });
 
+  // Filtrar la grilla principal a las cartas de la lista, con banner
+  // para quitar el filtro. Reusa el mecanismo LISTADO_IDS.
+  LISTADO_IDS = COTIZ.length ? COTIZ.map(function(e){return e.found[0];}) : null;
+  LISTADO_RESUMEN = LISTADO_IDS
+    ? (COTIZ.length+' carta(s) de tu lista'+(COTIZ_NOPE.length?' \u00B7 '+COTIZ_NOPE.length+' sin coincidencia':''))
+    : null;
   renderCotizacion();
+  renderAll();
 }
 
 function limpiarListaPK(){
@@ -1092,10 +1108,65 @@ function limpiarListaPK(){
   document.getElementById('paste-resultado').innerHTML='';
   document.getElementById('lista-footer').style.display='none';
   COTIZ=[]; COTIZ_NOPE=[];
+  LISTADO_IDS=null; LISTADO_RESUMEN=null;
+  renderAll();
+}
+
+/* ---------- REPARTO DE STOCK ENTRE LINEAS ----------
+   Dos lineas distintas pueden resolver a la MISMA carta
+   ("2 Pikachu EVS 49" y "2 Pikachu Evolving Skies").
+   Sin repartir, el resumen sumaba 4 unidades aunque el stock
+   fuera 3, y despues el carrito topeaba en 3: los totales no
+   coincidian. Aca se asigna en orden de aparicion y cada linea
+   solo puede tomar lo que quedo libre.                        */
+
+// Unidades de esta carta+idioma que ya estan en el carrito
+function enCarritoDe(uid, idioma){
+  var c=CARRITO.find(function(x){return x.cardId===uid&&x.idioma===idioma;});
+  return c?c.qty:0;
+}
+// Unidades comprometidas por OTRAS lineas activas para la misma carta+idioma
+function usadoPorOtras(idxActual, uid, idioma){
+  var u=0;
+  COTIZ.forEach(function(e,i){
+    if(i===idxActual||e.off) return;
+    if(e.found[0]===uid&&e.idioma===idioma) u+=e.disp;
+  });
+  return u;
+}
+// Maximo que puede tomar esta linea: stock menos lo del carrito y lo de otras lineas
+function topeLinea(idx){
+  var e=COTIZ[idx];
+  if(!e) return 0;
+  var stk=getStock(e.found,e.idioma);
+  return Math.max(0, stk - enCarritoDe(e.found[0],e.idioma) - usadoPorOtras(idx,e.found[0],e.idioma));
+}
+// Recorre en orden y recorta lo que no alcance
+function repartirStockCotiz(){
+  var tomado={};
+  COTIZ.forEach(function(e){
+    if(e.off){ e.dup=false; e.disp=0; return; }
+    var k=e.found[0]+'|'+e.idioma;
+    var stk=getStock(e.found,e.idioma);
+    var prc=getPrecio(e.found,e.idioma);
+    if(tomado[k]===undefined) tomado[k]=enCarritoDe(e.found[0],e.idioma);
+    var ya=tomado[k];
+    var libre=Math.max(0, stk-ya);
+    if(stk===0||prc===0){
+      e.disp=0; e.estado='sin'; e.dup=false; return;
+    }
+    // respeta un ajuste manual del usuario si cabe
+    var quiere=(e.dispManual!=null)?e.dispManual:e.item.qty;
+    e.disp=Math.min(quiere, libre);
+    tomado[k]=ya+e.disp;
+    e.dup=(ya>enCarritoDe(e.found[0],e.idioma));  // otra linea ya tomo de esta carta
+    e.estado=(e.disp===0)?'sin':(e.disp>=e.item.qty?'ok':'parcial');
+  });
 }
 
 /* ---------- RENDER ---------- */
 function renderCotizacion(){
+  repartirStockCotiz();
   var cont=document.getElementById('paste-resultado');
   var h='';
 
@@ -1128,8 +1199,21 @@ function renderCotizacion(){
     h+='<div class="ag-nota">Estas no tienen stock ahora. El resto sigue disponible para agregar.</div></div>';
   }
 
+  // Ya agregadas al carrito
+  var agregadas=COTIZ.map(function(e,i){return {e:e,idx:i};}).filter(function(o){return o.e.agregada;});
+  if(agregadas.length){
+    h+='<div class="sec-label" style="color:var(--green)">Ya en tu carrito \u00B7 '+agregadas.length+'</div><div class="ag-box">';
+    agregadas.forEach(function(o){
+      var r=o.e.found;
+      h+='<div class="ag-row"><div class="ag-info"><span class="ag-nom">'+escHtml(r[1])+'</span>'
+        +'<span class="ag-meta">'+r[2].toUpperCase()+' '+r[3]+' \u00B7 '+r[4]+' \u00B7 '+o.e.idioma+'</span></div>'
+        +'<span class="ag-qty" style="color:var(--green)">x'+(o.e.enCarrito||0)+'</span></div>';
+    });
+    h+='</div>';
+  }
+
   // Quitadas manualmente (se pueden restaurar)
-  var quitadas=COTIZ.map(function(e,i){return {e:e,idx:i};}).filter(function(o){return o.e.off;});
+  var quitadas=COTIZ.map(function(e,i){return {e:e,idx:i};}).filter(function(o){return o.e.off&&!o.e.agregada;});
   if(quitadas.length){
     h+='<div class="sec-label">Quitadas \u00B7 '+quitadas.length+'</div><div class="ag-box">';
     quitadas.forEach(function(o){
@@ -1157,7 +1241,8 @@ function renderCotizacion(){
 }
 
 function escHtml(t){
-  return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 function buildRiPK(e,idx){
@@ -1180,6 +1265,7 @@ function buildRiPK(e,idx){
   var carg=idiomasCargados(r), disp=idiomasDisponibles(r);
   var faltan=carg.filter(function(i){return disp.indexOf(i)<0;});
   if(faltan.length) aviso+='<div class="ri-aviso ri-aviso-idm">\u26A0 Sin stock en '+faltan.join(', ')+'</div>';
+  if(e.dup) aviso+='<div class="ri-aviso ri-aviso-idm">\u26A0 Repetida: otra linea de tu lista pide esta misma carta</div>';
 
   // selector de rareza
   var selRar='';
@@ -1208,13 +1294,14 @@ function buildRiPK(e,idx){
       +(ok?' onclick="cambiarIdiomaCotiz('+idx+',\''+idm+'\')"':' disabled')+'>'+idm+'</button>';
   });
 
-  var tope=(e.disp>0&&e.disp>=stk);
+  var max=topeLinea(idx);
+  var tope=(e.disp>0&&e.disp>=max);
   var qtyHtml='';
   if(e.estado!=='sin'&&!e.off){
     qtyHtml='<div class="qty-wrap">'
       +'<button class="qty-btn" onclick="cambiarQtyCotiz('+idx+',-1)" '+(e.disp===0?'disabled':'')+'>-</button>'
       +'<span class="qty-num'+(tope?' qty-max':'')+'">'+e.disp+'</span>'
-      +'<button class="qty-btn'+(tope?' qty-btn-max':'')+'" onclick="cambiarQtyCotiz('+idx+',1)" '+(e.disp>=stk?'disabled':'')+'>'+(tope?'\u2205':'+')+'</button>'
+      +'<button class="qty-btn'+(tope?' qty-btn-max':'')+'" onclick="cambiarQtyCotiz('+idx+',1)" '+(e.disp>=max?'disabled':'')+'>'+(tope?'\u2205':'+')+'</button>'
       +'</div>';
   }
 
@@ -1237,13 +1324,21 @@ function buildRiPK(e,idx){
 function buildResumenPK(){
   var act=COTIZ.filter(function(e){return !e.off;});
   var enc=act.reduce(function(s,e){return s+e.disp;},0);
-  var ped=COTIZ.reduce(function(s,e){return s+e.item.qty;},0)+COTIZ_NOPE.reduce(function(s,d){return s+d.qty;},0);
-  var falt=ped-enc;
+  var yaCarrito=COTIZ.reduce(function(s,e){return s+(e.agregada?(e.enCarrito||0):0);},0);
+  // Lo pedido excluye lo que ya paso al carrito, para que el resumen
+  // no diga "0 de N" despues de agregar.
+  var ped=COTIZ.reduce(function(s,e){return s+(e.agregada?0:e.item.qty);},0)
+         +COTIZ_NOPE.reduce(function(s,d){return s+d.qty;},0);
+  var falt=Math.max(0, ped-enc);
   var tot=act.reduce(function(s,e){return s+e.disp*getPrecio(e.found,e.idioma);},0);
-  return '<div class="sum-card"><div class="sum-title">Resumen</div>'
-    +'<div class="sum-line"><span>Cartas disponibles</span><strong>'+enc+' de '+ped+'</strong></div>'
-    +(falt>0?'<div class="sum-line"><span>No disponibles</span><strong>'+falt+'</strong></div>':'')
-    +'<div class="sum-line sum-total"><span>Total</span><strong>'+clp(tot)+'</strong></div></div>';
+  var h='<div class="sum-card"><div class="sum-title">Resumen</div>';
+  if(yaCarrito>0) h+='<div class="sum-line"><span>Ya en tu carrito</span><strong style="color:var(--green)">'+yaCarrito+'</strong></div>';
+  if(ped>0){
+    h+='<div class="sum-line"><span>Por agregar</span><strong>'+enc+' de '+ped+'</strong></div>';
+    if(falt>0) h+='<div class="sum-line"><span>No disponibles</span><strong>'+falt+'</strong></div>';
+  }
+  h+='<div class="sum-line sum-total"><span>Total por agregar</span><strong>'+clp(tot)+'</strong></div></div>';
+  return h;
 }
 
 /* ---------- ACCIONES ---------- */
@@ -1253,9 +1348,8 @@ function toggleNopePK(btn){
 }
 function cambiarQtyCotiz(idx,d){
   var e=COTIZ[idx]; if(!e) return;
-  var stk=getStock(e.found,e.idioma);
-  e.disp=Math.max(0,Math.min(stk,e.disp+d));
-  e.estado=(stk===0)?'sin':(e.disp>=e.item.qty?'ok':'parcial');
+  var max=topeLinea(idx);
+  e.dispManual=Math.max(0,Math.min(max,e.disp+d));
   renderCotizacion();
 }
 function toggleOffCotiz(idx){
@@ -1265,21 +1359,14 @@ function toggleOffCotiz(idx){
 }
 function cambiarIdiomaCotiz(idx,idm){
   var e=COTIZ[idx]; if(!e) return;
-  e.idioma=idm;
-  var stk=getStock(e.found,idm);
-  e.disp=Math.min(e.item.qty,stk);
-  e.estado=(stk===0||getPrecio(e.found,idm)===0)?'sin':(stk>=e.item.qty?'ok':'parcial');
+  e.idioma=idm; e.dispManual=null;
   renderCotizacion();
 }
 function cambiarRarezaCotiz(idx,uid){
   var e=COTIZ[idx]; if(!e) return;
   var nuevo=CARDS.find(function(c){return c[0]===parseInt(uid,10);});
   if(!nuevo) return;
-  e.found=nuevo;
-  e.idioma=idiomaActivo(nuevo);
-  var stk=getStock(nuevo,e.idioma);
-  e.disp=Math.min(e.item.qty,stk);
-  e.estado=(stk===0||getPrecio(nuevo,e.idioma)===0)?'sin':(stk>=e.item.qty?'ok':'parcial');
+  e.found=nuevo; e.idioma=idiomaActivo(nuevo); e.dispManual=null;
   renderCotizacion();
 }
 function cambiarCartaCotiz(idx,uid){
@@ -1289,10 +1376,7 @@ function cambiarCartaCotiz(idx,uid){
   e.grupo=grupoDeCarta(base);
   e.found=elegirVariante(e.grupo);
   e.idioma=idiomaActivo(e.found);
-  var stk=getStock(e.found,e.idioma);
-  e.disp=Math.min(e.item.qty,stk);
-  e.estado=(stk===0||getPrecio(e.found,e.idioma)===0)?'sin':(stk>=e.item.qty?'ok':'parcial');
-  e.fase=1;
+  e.dispManual=null; e.fase=1;
   renderCotizacion();
 }
 
@@ -1309,6 +1393,7 @@ function agregarCotizacionAlCarrito(){
       precio:prc,qty:Math.min(stk,e.disp),img:imgUrlFor(e.found),set:e.found[2]||'',
       setNombre:e.found[6]||'',num:e.found[3]||''});
     n++;
+    e.off=true; e.agregada=true; e.enCarrito=Math.min(stk,e.disp);
   });
   actualizarCarritoBtn();
   renderAll();
@@ -1385,10 +1470,10 @@ function renderVistaCarrito(){
     var stkC=cr?getStock(cr,c.idioma):c.qty;
     var topeC=(c.qty>=stkC);
     h+='<div class="cart-item">';
-    if(c.img) h+='<img src="'+c.img+'" alt="'+c.nombre+'" data-idx="0" onerror="imgFallbackCart(this,'+c.cardId+',parseInt(this.getAttribute(\'data-idx\'),10))">';
+    if(c.img) h+='<img src="'+c.img+'" alt="'+escHtml(c.nombre)+'" data-idx="0" onerror="imgFallbackCart(this,'+c.cardId+',parseInt(this.getAttribute(\'data-idx\'),10))">';
     h+='<div class="cart-item-info">'
-      +'<div class="cart-item-name">'+c.nombre+'</div>'
-      +'<div class="cart-item-meta">'+c.rareza+' - '+c.idioma+' - '+(c.set||'\u2014')+' '+(c.num||'')+'</div>'
+      +'<div class="cart-item-name">'+escHtml(c.nombre)+'</div>'
+      +'<div class="cart-item-meta">'+escHtml(c.rareza)+' - '+c.idioma+' - '+escHtml(c.set||'\u2014')+' '+escHtml(c.num||'')+'</div>'
       +'<div style="font-size:.72rem;color:var(--txm);margin-top:2px">'+clp(c.precio)+' x '+c.qty+'</div>'
       +'</div>'
       +'<div style="text-align:right;flex-shrink:0">'
@@ -1440,7 +1525,7 @@ function renderVistaFormulario(){
     +'<div class="field-error" id="err-ck-entrega">Elige una opcion de entrega.</div>'
     +'<div class="section-retiro" id="ck-sectionRetiro">'
     +'<div class="retiro-info"><strong>Paldea Games</strong> - te enviamos la direccion exacta al coordinar.<br>'
-    +'<strong>Lunes a viernes</strong> 10:00-18:30 | <strong>Sabado</strong> 10:00-14:00'
+    +'<strong>Lunes a viernes</strong> 10:00-18:00 | <strong>Sabado</strong> 10:00-14:00'
     +'<br><a href="https://maps.app.goo.gl/iuDSCBxPxVADgiUKA" target="_blank" class="retiro-link">Ver referencia en el mapa &rarr;</a></div>'
     +'<div class="row2" style="margin-top:12px">'
     +'<div class="field"><label>Dia preferido <span class="req">*</span></label>'
@@ -1528,7 +1613,7 @@ function opcionesDiasRetiroPK(){
     var mm=String(d.getMonth()+1).padStart(2,'0');
     var val=nom+' '+dd+'-'+mm+'-'+d.getFullYear();
     var label=nom+' '+d.getDate()+' de '+MESES[d.getMonth()];
-    if(n===0) label+=' (manana)';
+    if(i===1) label+=' (ma\u00F1ana)';   // solo si de verdad es el dia siguiente
     html+='<option value="'+val+'" data-dow="'+nom+'">'+label+'</option>';
     n++;
   }
@@ -1577,9 +1662,12 @@ function actualizarHorasRetiroPK(){
   if(!sel) return;
   var max=(dow==='Sabado')?'14:00':'18:00';
   var todas=['10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00','17:30','18:00'];
+  var previa=sel.value;
   var html='<option value="">Elige una hora</option>';
   todas.forEach(function(h){ if(h<=max) html+='<option>'+h+'</option>'; });
   sel.innerHTML=html;
+  // conservar la hora ya elegida si sigue siendo valida para el nuevo dia
+  if(previa&&previa<=max) sel.value=previa;
 }
 
 function validarFormularioPK(){
@@ -1611,8 +1699,12 @@ function validarFormularioPK(){
   return ok;
 }
 
+var ENVIANDO=false;
 async function enviarPedidoPK(){
+  if(ENVIANDO) return;
+  if(!CARRITO.length){ alert('Tu carrito esta vacio.'); volverAlCarrito(); return; }
   if(!validarFormularioPK()) return;
+  ENVIANDO=true;
   var btn=document.getElementById('ck-submit');
   btn.disabled=true; btn.textContent='Enviando...';
 
@@ -1644,27 +1736,41 @@ async function enviarPedidoPK(){
     direccion:entregaMode==='envio'?direccionStr:null
   };
 
-  // Se intenta leer la respuesta para mostrar el numero de pedido real.
-  // Si el navegador bloquea la lectura, se reintenta en modo no-cors:
-  // el pedido igual queda registrado, solo no vemos el ID.
-  var resp=null;
+  // UN SOLO envio. Si el navegador bloquea la LECTURA de la respuesta
+  // (Apps Script responde con redirect y a veces CORS impide leerlo),
+  // la peticion YA salio y el pedido YA quedo registrado: reintentar
+  // aqui generaba un pedido duplicado en la hoja.
+  var resp=null, enviado=false;
   try{
     var r=await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(orderData)});
-    resp=await r.json();
+    enviado=true;
+    try{ resp=await r.json(); }catch(eJson){ resp=null; }   // se envio, solo no pudimos leer
   } catch(e){
-    try{
-      await fetch(GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(orderData)});
-      resp=null;
-    } catch(e2){
-      alert('Error de conexion. Intenta de nuevo.');
-      btn.disabled=false; btn.textContent='Enviar pedido';
-      return;
-    }
+    // fetch rechazado: puede ser CORS (ya salio) o red caida (no salio).
+    // No se reintenta para no arriesgar un duplicado.
+    enviado=true;
+    resp=null;
   }
+
+  if(!enviado){
+    ENVIANDO=false;
+    alert('Error de conexion. Intenta de nuevo.');
+    btn.disabled=false; btn.textContent='Enviar pedido';
+    return;
+  }
+  if(resp&&resp.success===false){
+    ENVIANDO=false;
+    btn.disabled=false; btn.textContent='Enviar pedido';
+    alert(resp.error||'No se pudo registrar el pedido. Intenta de nuevo.');
+    return;
+  }
+  ENVIANDO=false;
 
   ULTIMO_PEDIDO=resp||null;
   CHECKOUT_VIEW='success';
   CARRITO=[];
+  VINO_DEL_LISTADO=false;
+  COTIZ=[]; COTIZ_NOPE=[];
   actualizarCarritoBtn();
   renderCarritoPanel();
   renderAll();
@@ -1684,15 +1790,15 @@ function renderVistaExito(){
 }
 
 function cambiarQtyCart(uid,idioma,delta){
+  // actualizarCarritoBtn ya repinta el panel cuando esta en vista carrito
   cambiarQty(uid,delta,idioma);
-  renderCarritoPanel();
 }
 function quitarCart(uid,idioma){
   var idx=CARRITO.findIndex(function(c){return c.cardId===uid&&c.idioma===idioma;});
-  if(idx>=0){CARRITO.splice(idx,1);}
-  actualizarCarritoBtn();
+  if(idx<0) return;
+  CARRITO.splice(idx,1);
   renderCard(uid);
-  renderCarritoPanel();
+  actualizarCarritoBtn();
 }
 
 document.addEventListener('wheel',function(e){ if(e.ctrlKey) e.preventDefault(); },{passive:false});
