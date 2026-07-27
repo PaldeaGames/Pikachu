@@ -268,6 +268,14 @@ header p{font-size:.75rem;color:var(--txm);margin-top:1px}
 .sum-line strong{color:var(--tx)}
 .sum-total{border-top:1px solid var(--brd2);margin-top:6px;padding-top:8px}
 .sum-total strong{font-family:'Syne',sans-serif;font-size:1.1rem;color:var(--gold)}
+.ag-box{background:var(--surf2);border:1px solid var(--brd);border-radius:9px;padding:6px 10px}
+.ag-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--brd)}
+.ag-row:last-of-type{border-bottom:none}
+.ag-info{flex:1;min-width:0;display:flex;flex-direction:column}
+.ag-nom{font-size:.78rem;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ag-meta{font-size:.65rem;color:var(--txm)}
+.ag-qty{font-size:.7rem;color:var(--txm);flex-shrink:0}
+.ag-nota{font-size:.67rem;color:var(--txm);padding:7px 0 3px;line-height:1.45;border-top:1px solid var(--brd);margin-top:4px}
 </style>
 </head>
 <body>
@@ -280,7 +288,7 @@ header p{font-size:.75rem;color:var(--txm);margin-top:1px}
       <p>Elige tu idioma en cada carta y agrégala al carrito</p>
     </div>
   </div>
-  <button class="head-cart-btn" onclick="abrirCarrito()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>Carrito <span class="cart-count zero" id="cart-count">0</span></button>
+  <button class="head-cart-btn" onclick="VINO_DEL_LISTADO=false;abrirCarrito()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>Carrito <span class="cart-count zero" id="cart-count">0</span></button>
 </header>
 <button class="paste-banner opt-c" onclick="abrirPegarListado()">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1"></rect></svg>
@@ -297,7 +305,10 @@ header p{font-size:.75rem;color:var(--txm);margin-top:1px}
     <div class="cart-items" id="cart-body"></div>
     <div class="cart-footer" id="cart-footer-zone">
       <div class="cart-total"><span class="cart-total-label">Total</span><span class="cart-total-val" id="cart-total">$0</span></div>
-      <button class="cart-ig-btn" id="cart-checkout-btn" onclick="irACheckout()" style="display:block;width:100%;border:none">Continuar pedido</button>
+      <div style="display:flex;gap:8px" id="cart-btns-row">
+        <button class="checkout-back" id="cart-back-btn" onclick="cerrarCarrito()" style="flex:0 0 auto">Volver</button>
+        <button class="cart-ig-btn" id="cart-checkout-btn" onclick="irACheckout()" style="flex:1;border:none">Continuar pedido</button>
+      </div>
       <div class="cart-note">Completa tus datos y te contactamos por Instagram para coordinar el pago.</div>
     </div>
   </div>
@@ -1087,9 +1098,49 @@ function limpiarListaPK(){
 function renderCotizacion(){
   var cont=document.getElementById('paste-resultado');
   var h='';
-  if(COTIZ.length) h+='<div class="sec-label">Encontradas</div>';
 
-  COTIZ.forEach(function(e,idx){ h+=buildRiPK(e,idx); });
+  // Las que tienen stock se muestran completas con miniatura.
+  // Las agotadas van en un listado compacto: ocupan menos y dejan
+  // claro que "esta falto, pero puedes llevar el resto".
+  var conStock=[], agotadas=[];
+  COTIZ.forEach(function(e,idx){
+    if(e.estado==='sin'&&!e.off) agotadas.push({e:e,idx:idx});
+    else conStock.push({e:e,idx:idx});
+  });
+
+  if(conStock.length){
+    h+='<div class="sec-label">Disponibles \u00B7 '+conStock.length+'</div>';
+    conStock.forEach(function(o){ h+=buildRiPK(o.e,o.idx); });
+  }
+
+  if(agotadas.length){
+    h+='<div class="sec-label" style="color:#ffb347">Agotadas \u00B7 '+agotadas.length+'</div>';
+    h+='<div class="ag-box">';
+    agotadas.forEach(function(o){
+      var r=o.e.found;
+      h+='<div class="ag-row">'
+        +'<div class="ag-info"><span class="ag-nom">'+escHtml(r[1])+'</span>'
+        +'<span class="ag-meta">'+r[2].toUpperCase()+' '+r[3]+' \u00B7 '+r[4]+'</span></div>'
+        +'<span class="ag-qty">x'+o.e.item.qty+'</span>'
+        +'<button class="ri-x" onclick="toggleOffCotiz('+o.idx+')" title="Quitar de la lista">\u2715</button>'
+        +'</div>';
+    });
+    h+='<div class="ag-nota">Estas no tienen stock ahora. El resto sigue disponible para agregar.</div></div>';
+  }
+
+  // Quitadas manualmente (se pueden restaurar)
+  var quitadas=COTIZ.map(function(e,i){return {e:e,idx:i};}).filter(function(o){return o.e.off;});
+  if(quitadas.length){
+    h+='<div class="sec-label">Quitadas \u00B7 '+quitadas.length+'</div><div class="ag-box">';
+    quitadas.forEach(function(o){
+      var r=o.e.found;
+      h+='<div class="ag-row"><div class="ag-info"><span class="ag-nom">'+escHtml(r[1])+'</span>'
+        +'<span class="ag-meta">'+r[2].toUpperCase()+' '+r[3]+' \u00B7 '+r[4]+'</span></div>'
+        +'<span class="ag-qty">x'+o.e.item.qty+'</span>'
+        +'<button class="ri-x" onclick="toggleOffCotiz('+o.idx+')" title="Restaurar">\u21BA</button></div>';
+    });
+    h+='</div>';
+  }
 
   if(COTIZ_NOPE.length){
     var tot=COTIZ_NOPE.reduce(function(s,d){return s+d.qty;},0);
@@ -1116,9 +1167,7 @@ function buildRiPK(e,idx){
   var url=imgUrlFor(r);
 
   var badges='';
-  if(e.off) badges+='<span class="ri-badge b-parc">Quitada</span>';
-  else if(e.estado==='sin') badges+='<span class="ri-badge b-parc">Sin stock</span>';
-  else if(e.estado==='ok') badges+='<span class="ri-badge b-ok">En stock</span>';
+  if(e.estado==='ok') badges+='<span class="ri-badge b-ok">En stock</span>';
   else badges+='<span class="ri-badge b-parc">Parcial: '+e.disp+' de '+e.item.qty+'</span>';
   if(e.grupo.length>1) badges+='<span class="ri-badge b-alt">'+e.grupo.length+' rarezas</span>';
 
@@ -1264,7 +1313,7 @@ function agregarCotizacionAlCarrito(){
   actualizarCarritoBtn();
   renderAll();
   cerrarPegarListado();
-  if(n>0) abrirCarrito();
+  if(n>0){ VINO_DEL_LISTADO=true; abrirCarrito(); }
 }
 
 function mostrarBannerListado(){
@@ -1291,10 +1340,20 @@ function limpiarFiltroListado(){
 var CHECKOUT_VIEW='cart';
 var entregaMode='', direccionMode='domicilio';
 
+var VINO_DEL_LISTADO=false;
 function abrirCarrito(){
   CHECKOUT_VIEW='cart';
   document.getElementById('carrito-panel').classList.add('show');
   renderCarritoPanel();
+  var b=document.getElementById('cart-back-btn');
+  if(b){
+    b.textContent=VINO_DEL_LISTADO?'\u2190 Volver al listado':'Seguir viendo';
+    b.setAttribute('onclick',VINO_DEL_LISTADO?'volverAlListado()':'cerrarCarrito()');
+  }
+}
+function volverAlListado(){
+  cerrarCarrito();
+  abrirPegarListado();
 }
 function cerrarCarrito(){document.getElementById('carrito-panel').classList.remove('show');}
 
@@ -1312,11 +1371,11 @@ function renderVistaCarrito(){
   if(!CARRITO.length){
     body.innerHTML='<div class="cart-empty">Tu carrito esta vacio.</div>';
     document.getElementById('cart-total').textContent='$0';
-    footer.querySelector('#cart-checkout-btn').style.display='none';
+    footer.querySelector('#cart-btns-row').style.display='none';
     footer.querySelector('.cart-note').style.display='none';
     return;
   }
-  footer.querySelector('#cart-checkout-btn').style.display='block';
+  footer.querySelector('#cart-btns-row').style.display='flex';
   footer.querySelector('.cart-note').style.display='block';
   var total=0, h='';
   CARRITO.forEach(function(c){
@@ -1585,26 +1644,42 @@ async function enviarPedidoPK(){
     direccion:entregaMode==='envio'?direccionStr:null
   };
 
+  // Se intenta leer la respuesta para mostrar el numero de pedido real.
+  // Si el navegador bloquea la lectura, se reintenta en modo no-cors:
+  // el pedido igual queda registrado, solo no vemos el ID.
+  var resp=null;
   try{
-    await fetch(GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(orderData)});
-    CHECKOUT_VIEW='success';
-    CARRITO=[];
-    actualizarCarritoBtn();
-    renderCarritoPanel();
-    renderAll();
+    var r=await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(orderData)});
+    resp=await r.json();
   } catch(e){
-    alert('Error de conexion. Intenta de nuevo.');
-    btn.disabled=false; btn.textContent='Enviar pedido';
+    try{
+      await fetch(GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(orderData)});
+      resp=null;
+    } catch(e2){
+      alert('Error de conexion. Intenta de nuevo.');
+      btn.disabled=false; btn.textContent='Enviar pedido';
+      return;
+    }
   }
+
+  ULTIMO_PEDIDO=resp||null;
+  CHECKOUT_VIEW='success';
+  CARRITO=[];
+  actualizarCarritoBtn();
+  renderCarritoPanel();
+  renderAll();
 }
 
+var ULTIMO_PEDIDO=null;
 function renderVistaExito(){
   document.getElementById('cart-head-title').textContent='Pedido enviado';
   document.getElementById('cart-footer-zone').style.display='none';
+  var p=ULTIMO_PEDIDO;
   document.getElementById('cart-body').innerHTML=
     '<div class="success-box"><div class="ok-icon">\u2713</div>'
-    +'<h3>Pedido registrado</h3>'
+    +'<h3>Pedido '+((p&&p.id)?p.id:'registrado')+'</h3>'
     +'<p>Te contactaremos por Instagram para confirmar stock y coordinar el pago.</p>'
+    +(p&&p.total?'<p style="margin-top:6px;color:var(--gold);font-weight:700">Total: '+clp(p.total)+'</p>':'')
     +'<button class="checkout-back" style="margin-top:18px" onclick="cerrarCarrito()">Cerrar</button></div>';
 }
 
