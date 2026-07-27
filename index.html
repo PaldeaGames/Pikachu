@@ -232,6 +232,42 @@ header p{font-size:.75rem;color:var(--txm);margin-top:1px}
 .success-box .ok-icon{font-size:2.4rem;margin-bottom:10px}
 .success-box h3{font-family:'Syne',sans-serif;color:var(--accent);font-size:1.05rem;margin-bottom:8px}
 .success-box p{font-size:.85rem;color:var(--txm);line-height:1.6}
+.lista-hint{font-size:.78rem;color:var(--txm);line-height:1.55}
+.lista-hint code{background:var(--surf2);padding:1px 5px;border-radius:4px;font-family:monospace;color:var(--gold);font-size:.72rem}
+.lista-ej{background:var(--surf2);border:1px solid var(--brd);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:.72rem;color:var(--txm);line-height:1.7;font-family:monospace}
+.sec-label{font-family:'Syne',sans-serif;font-size:.72rem;font-weight:800;color:var(--txm);text-transform:uppercase;letter-spacing:.08em;margin:14px 0 8px}
+.ri{background:var(--surf2);border:1px solid var(--brd);border-radius:10px;padding:10px 12px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start}
+.ri.ri-off{opacity:.4}
+.ri-img{width:42px;flex-shrink:0;border-radius:5px;background:#050510}
+.ri-body{flex:1;min-width:0}
+.ri-name{font-family:'Syne',sans-serif;font-size:.86rem;font-weight:800;line-height:1.2}
+.ri-meta{font-size:.68rem;color:var(--txm);margin-top:2px}
+.ri-aviso{font-size:.67rem;margin-top:3px;line-height:1.4}
+.ri-aviso-set{color:#7fb4ff}
+.ri-aviso-idm{color:#ffb347}
+.ri-badges{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+.ri-badge{font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:8px;letter-spacing:.02em}
+.b-ok{background:rgba(71,255,178,.13);color:var(--green)}
+.b-parc{background:rgba(255,179,71,.13);color:#ffb347}
+.b-alt{background:rgba(124,92,191,.18);color:#c3aaff}
+.ri-ctrls{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:7px}
+.ri-sel{background:var(--surf);border:1px solid var(--brd2);color:var(--tx);padding:4px 7px;border-radius:6px;font-size:.7rem;font-family:'DM Sans',sans-serif;cursor:pointer;max-width:150px}
+.ri-sel:focus{outline:none;border-color:var(--acc)}
+.ri-right{text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.ri-unit{font-size:.65rem;color:var(--txm);white-space:nowrap}
+.ri-sub{font-family:'Syne',sans-serif;font-size:.9rem;font-weight:800;color:var(--gold);white-space:nowrap}
+.ri-x{background:none;border:none;color:var(--txm);cursor:pointer;font-size:.9rem;padding:2px 6px;border-radius:5px;line-height:1}
+.ri-x:hover{color:var(--red);background:rgba(255,77,77,.1)}
+.nope-tog{width:100%;display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;border:1px dashed rgba(255,80,80,.3);background:rgba(255,80,80,.05);color:var(--txm);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.76rem;text-align:left;margin-top:12px}
+.nope-tog:hover{border-color:rgba(255,80,80,.55)}
+.nope-body{display:none;padding:8px 12px;background:rgba(255,80,80,.04);border:1px dashed rgba(255,80,80,.2);border-top:none;border-radius:0 0 8px 8px}
+.nope-row{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid var(--brd);font-size:.72rem;color:var(--txm)}
+.sum-card{background:rgba(124,92,191,.09);border:1px solid var(--acc);border-radius:10px;padding:12px 14px;margin-top:14px}
+.sum-title{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:800;color:#cdb8ff;margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em}
+.sum-line{display:flex;justify-content:space-between;font-size:.78rem;color:var(--txm);padding:3px 0}
+.sum-line strong{color:var(--tx)}
+.sum-total{border-top:1px solid var(--brd2);margin-top:6px;padding-top:8px}
+.sum-total strong{font-family:'Syne',sans-serif;font-size:1.1rem;color:var(--gold)}
 </style>
 </head>
 <body>
@@ -271,12 +307,18 @@ header p{font-size:.75rem;color:var(--txm);margin-top:1px}
   <div class="paste-drawer">
     <div class="cart-head"><h2>Pegar listado</h2><button class="cart-close" onclick="cerrarPegarListado()">x</button></div>
     <div class="paste-body">
-      <div class="paste-hint">Pega tu lista, una carta por línea. Ej: <code>Pikachu x2</code> o <code>Flying Pikachu, 1</code><br>Puedes agregar el set o el número: <code>Pikachu EVS 49</code></div>
-      <textarea id="paste-textarea" placeholder="Pikachu x2&#10;Flying Pikachu&#10;Pikachu EVS 49"></textarea>
+      <div class="lista-hint">Pega tu lista, <b>una carta por línea</b>. Reconoce varios formatos:
+        <div class="lista-ej">4 Pikachu EVS 49<br>2 Pikachu Evolving Skies<br>Pikachu PGO 28<br>Flying Pikachu x3<br>Pikachu 25</div>
+      </div>
+      <textarea id="paste-textarea" placeholder="4 Pikachu EVS 49&#10;2 Pikachu Evolving Skies&#10;Flying Pikachu x3&#10;Pikachu 25"></textarea>
+      <div style="display:flex;gap:8px">
+        <button class="vb" style="flex:1;padding:9px" onclick="cotizarListaPK()">Cotizar lista</button>
+        <button class="vb" style="padding:9px 14px" onclick="limpiarListaPK()">Limpiar</button>
+      </div>
       <div id="paste-resultado"></div>
     </div>
-    <div class="cart-footer">
-      <button class="cart-ig-btn" style="background:var(--accent);color:var(--accent-text)" onclick="procesarPegarListado()">Buscar y agregar</button>
+    <div class="cart-footer" id="lista-footer" style="display:none">
+      <button class="cart-ig-btn" style="background:var(--accent);color:var(--accent-text)" onclick="agregarCotizacionAlCarrito()">Agregar todo al carrito</button>
     </div>
   </div>
 </div>
@@ -846,53 +888,385 @@ function actualizarCarritoBtn(){
 /* ===================== PEGAR LISTADO ===================== */
 function abrirPegarListado(){
   document.getElementById('paste-panel').classList.add('show');
-  document.getElementById('paste-resultado').innerHTML='';
+  if(!COTIZ.length&&!COTIZ_NOPE.length){
+    document.getElementById('paste-resultado').innerHTML='';
+    document.getElementById('lista-footer').style.display='none';
+  }
 }
 function cerrarPegarListado(){
   document.getElementById('paste-panel').classList.remove('show');
 }
-function parsearLineaListado(linea){
-  linea=linea.trim();
-  if(!linea) return null;
-  var m=linea.match(/^(.*?)(?:\s*[xX,]\s*(\d+))?$/);
-  var nombre=(m?m[1]:linea).trim().replace(/[,]+$/,'').trim();
-  var cantidad=m&&m[2]?parseInt(m[2],10):1;
-  if(!nombre) return null;
-  return {nombre:nombre,cantidad:cantidad||1};
+
+/* ============================================================
+   COTIZADOR DESDE LISTADO  (adaptado de Meta Game)
+   ------------------------------------------------------------
+   Metagame usa parseLine posicional estricto: "qty nombre SET numero".
+   Sirve para jugadores de torneo que copian de Limitless/PTCGL.
+   Los coleccionistas de Pikachu escriben mucho mas suelto, asi que
+   aca el parser es hibrido: extrae la cantidad y deja el RESTO como
+   tokens libres que se cruzan contra nombre + codSet + nombre de set
+   + numero + cod_int. Eso acepta los dos mundos:
+
+     4 Pikachu EVS 49        (formato Limitless completo)
+     2 Pikachu Evolving Skies (nombre + set escrito largo)
+     Pikachu PGO 28           (sin cantidad)
+     Flying Pikachu x3        (cantidad al final)
+     Pikachu 25               (nombre + numero)
+     Pikachu                  (solo nombre)
+
+   Busqueda en 3 fases, igual criterio que findGrupo de Metagame:
+     Fase 1: todos los tokens calzan  -> match exacto
+     Fase 2: se sueltan los numericos -> mismo nombre/set, otro numero
+     Fase 3: solo los tokens de texto -> aviso "Pediste -> Tenemos"
+   ============================================================ */
+
+var COTIZ=[];        // resultados activos
+var COTIZ_NOPE=[];   // lineas sin coincidencia
+
+function normPK(v){
+  return String(v||'').trim().toLowerCase()
+    .normalize('NFKD').replace(/[\u0300-\u036f]/g,'');
 }
-function procesarPegarListado(){
+function esTokenNumerico(t){ return /^\d{1,4}[a-z]?$/i.test(t) || /^\d{1,4}\/\d{1,4}$/.test(t); }
+
+function parsearLineaPK(linea){
+  var l=String(linea||'').trim();
+  if(l.startsWith('*')) l=l.replace(/^\*\s*/,'');
+  if(!l||l.startsWith('//')||l.startsWith('#')) return null;
+  // encabezados de seccion de deck list
+  if(/^(pokemon|pokémon|trainer|energy|energia|energía|total|stadium|supporter|item)s?\s*:/i.test(l)) return null;
+
+  var display=l;
+  var qty=null;
+  var toks=l.split(/\s+/).filter(Boolean);
+
+  // cantidad al inicio: "4 Pikachu ..."
+  if(toks.length>1 && /^\d{1,2}$/.test(toks[0]) && parseInt(toks[0],10)>0 && parseInt(toks[0],10)<=99){
+    qty=parseInt(toks[0],10);
+    toks=toks.slice(1);
+  }
+  // cantidad al final: "... x3"  "... X3"
+  if(qty===null && toks.length>1){
+    var ult=toks[toks.length-1];
+    var m=ult.match(/^[xX](\d{1,2})$/);
+    if(m){ qty=parseInt(m[1],10); toks=toks.slice(0,-1); }
+  }
+  // cantidad tras coma: "Pikachu, 2"
+  if(qty===null){
+    var mc=l.match(/,\s*(\d{1,2})\s*$/);
+    if(mc){ qty=parseInt(mc[1],10); toks=l.replace(/,\s*\d{1,2}\s*$/,'').trim().split(/\s+/).filter(Boolean); }
+  }
+  if(qty===null||isNaN(qty)||qty<1) qty=1;
+
+  // limpiar tokens de puntuacion suelta
+  toks=toks.map(function(t){return t.replace(/[,;]+$/,'');}).filter(Boolean);
+  if(!toks.length) return null;
+
+  var tokensNorm=toks.map(normPK);
+  var numericos=tokensNorm.filter(esTokenNumerico);
+  var textuales=tokensNorm.filter(function(t){return !esTokenNumerico(t);});
+  if(!textuales.length && !numericos.length) return null;
+
+  return {
+    qty: qty,
+    display: toks.join(' '),
+    tokens: tokensNorm,
+    textuales: textuales,
+    numericos: numericos
+  };
+}
+
+// texto contra el que se cruzan los tokens de una linea
+function buscablePK(c){
+  // c = [uid,nombre,codSet,numero,rareza,codInt,setNombre,...]
+  var numCorto=String(c[3]||'').split('/')[0];
+  return normPK(c[1]+' '+c[2]+' '+c[6]+' '+c[3]+' '+numCorto+' '+c[5]+' '+c[4]);
+}
+function matchTokens(c, toks){
+  if(!toks.length) return false;
+  var b=buscablePK(c);
+  return toks.every(function(t){ return b.indexOf(t)>=0; });
+}
+
+// Agrupa variantes: todas las CARDS que son la misma carta fisica
+// (mismo nombre + codSet + numero) pero distinta rareza.
+function grupoDeCarta(c){
+  return CARDS.filter(function(x){
+    return normPK(x[1])===normPK(c[1]) && normPK(x[2])===normPK(c[2]) && normPK(x[3])===normPK(c[3]);
+  });
+}
+
+function buscarItemPK(item){
+  // Fase 1: todos los tokens
+  var f1=CARDS.filter(function(c){return matchTokens(c,item.tokens);});
+  if(f1.length) return {fase:1, matches:f1};
+  // Fase 2: sin los numericos (mismo nombre/set, otro numero)
+  if(item.textuales.length){
+    var f2=CARDS.filter(function(c){return matchTokens(c,item.textuales);});
+    if(f2.length) return {fase:2, matches:f2};
+  }
+  // Fase 3: solo el primer token textual (normalmente el nombre)
+  if(item.textuales.length>1){
+    var f3=CARDS.filter(function(c){return matchTokens(c,[item.textuales[0]]);});
+    if(f3.length) return {fase:3, matches:f3};
+  }
+  return null;
+}
+
+// Elige la mejor variante de un conjunto: prioriza con stock, luego NRML
+function elegirVariante(cands){
+  var conStock=cands.filter(function(c){return idiomasDisponibles(c).length>0;});
+  var pool=conStock.length?conStock:cands;
+  var nrml=pool.find(function(c){return String(c[4]).toUpperCase()==='NRML';});
+  return nrml||pool[0];
+}
+
+/* ---------- COTIZAR ---------- */
+function cotizarListaPK(){
   var raw=document.getElementById('paste-textarea').value;
-  var lineas=raw.split('\n').map(parsearLineaListado).filter(Boolean);
-  if(!lineas.length){
-    document.getElementById('paste-resultado').innerHTML='<div class="paste-result-item paste-result-fail"><span>Pega al menos una carta.</span></div>';
+  var cont=document.getElementById('paste-resultado');
+  if(!raw.trim()){
+    cont.innerHTML='<div class="nope-row" style="color:var(--red)">Pega al menos una carta.</div>';
+    document.getElementById('lista-footer').style.display='none';
     return;
   }
-  var idsEncontrados=[];
-  var noEncontradas=[];
-  lineas.forEach(function(item){
-    var toks=item.nombre.toLowerCase().split(/\s+/).filter(Boolean);
-    var matches=CARDS.filter(function(c){
-      var buscable=(c[1]+' '+c[2]+' '+c[6]+' '+c[3]+' '+c[5]).toLowerCase();
-      return toks.every(function(t){return buscable.indexOf(t)>=0;});
+  var items=raw.split('\n').map(parsearLineaPK).filter(Boolean);
+  if(!items.length){
+    cont.innerHTML='<div class="nope-row" style="color:var(--red)">No se reconocio ninguna carta.</div>';
+    document.getElementById('lista-footer').style.display='none';
+    return;
+  }
+
+  COTIZ=[]; COTIZ_NOPE=[];
+  items.forEach(function(item){
+    var res=buscarItemPK(item);
+    if(!res){ COTIZ_NOPE.push(item); return; }
+
+    // agrupar los matches por carta fisica, respetando el orden de aparicion
+    var vistas=[], grupos=[];
+    res.matches.forEach(function(c){
+      var k=normPK(c[1])+'|'+normPK(c[2])+'|'+normPK(c[3]);
+      if(vistas.indexOf(k)<0){ vistas.push(k); grupos.push(grupoDeCarta(c)); }
     });
-    if(!matches.length){ noEncontradas.push(item.nombre); return; }
-    matches.forEach(function(r){ if(idsEncontrados.indexOf(r[0])<0) idsEncontrados.push(r[0]); });
+
+    // si la linea calza con varias cartas distintas, se prioriza la que tenga stock
+    var grupoElegido=null;
+    for(var i=0;i<grupos.length;i++){
+      if(grupos[i].some(function(c){return idiomasDisponibles(c).length>0;})){ grupoElegido=grupos[i]; break; }
+    }
+    if(!grupoElegido) grupoElegido=grupos[0];
+
+    var found=elegirVariante(grupoElegido);
+    var idioma=idiomaActivo(found);
+    var stk=getStock(found,idioma);
+    var prc=getPrecio(found,idioma);
+    var disp=Math.min(item.qty, stk);
+    var estado = (stk===0||prc===0) ? 'sin' : (stk>=item.qty ? 'ok' : 'parcial');
+
+    COTIZ.push({
+      item:item, fase:res.fase,
+      grupo:grupoElegido,
+      alternativas:grupos,
+      found:found, idioma:idioma,
+      disp: estado==='sin'?0:disp,
+      estado:estado, off:false
+    });
   });
 
-  if(!idsEncontrados.length){
-    document.getElementById('paste-resultado').innerHTML=
-      '<div class="paste-result-item paste-result-fail"><span>Sin coincidencias.</span></div>';
-    return;
-  }
-  LISTADO_IDS=idsEncontrados;
-  LISTADO_RESUMEN=idsEncontrados.length+' variante(s) encontrada(s)'
-    +(noEncontradas.length?' &middot; no encontradas: '+noEncontradas.join(', '):'');
-  QF='';SF='';VF='';LF='';DISPF='';
-  var inp=document.getElementById('search-input'); if(inp) inp.value='';
-  document.querySelectorAll('#filtros-bar select').forEach(function(s){s.value='';});
-  cerrarPegarListado();
-  renderAll();
+  renderCotizacion();
 }
+
+function limpiarListaPK(){
+  document.getElementById('paste-textarea').value='';
+  document.getElementById('paste-resultado').innerHTML='';
+  document.getElementById('lista-footer').style.display='none';
+  COTIZ=[]; COTIZ_NOPE=[];
+}
+
+/* ---------- RENDER ---------- */
+function renderCotizacion(){
+  var cont=document.getElementById('paste-resultado');
+  var h='';
+  if(COTIZ.length) h+='<div class="sec-label">Encontradas</div>';
+
+  COTIZ.forEach(function(e,idx){ h+=buildRiPK(e,idx); });
+
+  if(COTIZ_NOPE.length){
+    var tot=COTIZ_NOPE.reduce(function(s,d){return s+d.qty;},0);
+    h+='<button class="nope-tog" onclick="toggleNopePK(this)">'
+      +'<span>\u26A0 '+tot+' carta'+(tot>1?'s':'')+' sin coincidencia</span><span style="font-size:.62rem;opacity:.6">Ver \u25BE</span></button>'
+      +'<div class="nope-body">'
+      +COTIZ_NOPE.map(function(d){return '<div class="nope-row"><span>'+escHtml(d.display)+'</span><span>x'+d.qty+'</span></div>';}).join('')
+      +'</div>';
+  }
+
+  h+=buildResumenPK();
+  cont.innerHTML=h;
+  document.getElementById('lista-footer').style.display=COTIZ.some(function(e){return !e.off&&e.disp>0;})?'block':'none';
+}
+
+function escHtml(t){
+  return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function buildRiPK(e,idx){
+  var r=e.found;
+  var stk=getStock(r,e.idioma), prc=getPrecio(r,e.idioma);
+  var sub=e.off?0:e.disp*prc;
+  var url=imgUrlFor(r);
+
+  var badges='';
+  if(e.off) badges+='<span class="ri-badge b-parc">Quitada</span>';
+  else if(e.estado==='sin') badges+='<span class="ri-badge b-parc">Sin stock</span>';
+  else if(e.estado==='ok') badges+='<span class="ri-badge b-ok">En stock</span>';
+  else badges+='<span class="ri-badge b-parc">Parcial: '+e.disp+' de '+e.item.qty+'</span>';
+  if(e.grupo.length>1) badges+='<span class="ri-badge b-alt">'+e.grupo.length+' rarezas</span>';
+
+  // aviso de fase (equivalente a "Pediste -> Tenemos" de Metagame)
+  var aviso='';
+  if(e.fase===2) aviso+='<div class="ri-aviso ri-aviso-set">Pediste: '+escHtml(e.item.display)+' \u2192 Tenemos: '+r[2].toUpperCase()+' '+r[3]+'</div>';
+  else if(e.fase===3) aviso+='<div class="ri-aviso ri-aviso-set">No hubo match exacto. Te mostramos: '+escHtml(r[1])+' '+r[2].toUpperCase()+' '+r[3]+'</div>';
+
+  // aviso de idioma
+  var carg=idiomasCargados(r), disp=idiomasDisponibles(r);
+  var faltan=carg.filter(function(i){return disp.indexOf(i)<0;});
+  if(faltan.length) aviso+='<div class="ri-aviso ri-aviso-idm">\u26A0 Sin stock en '+faltan.join(', ')+'</div>';
+
+  // selector de rareza
+  var selRar='';
+  if(e.grupo.length>1){
+    selRar='<select class="ri-sel" onchange="cambiarRarezaCotiz('+idx+',this.value)">'
+      +e.grupo.map(function(c){
+        var sinStk=idiomasDisponibles(c).length===0;
+        return '<option value="'+c[0]+'"'+(c[0]===r[0]?' selected':'')+'>'+c[4]+(sinStk?' (sin stock)':'')+'</option>';
+      }).join('')+'</select>';
+  }
+  // selector de carta alternativa (otro set/numero con el mismo nombre)
+  var selAlt='';
+  if(e.alternativas.length>1){
+    selAlt='<select class="ri-sel" onchange="cambiarCartaCotiz('+idx+',this.value)">'
+      +e.alternativas.map(function(g){
+        var c=elegirVariante(g);
+        var sel=(normPK(c[1])===normPK(r[1])&&normPK(c[2])===normPK(r[2])&&normPK(c[3])===normPK(r[3]))?' selected':'';
+        return '<option value="'+c[0]+'"'+sel+'>'+c[2].toUpperCase()+' '+c[3]+'</option>';
+      }).join('')+'</select>';
+  }
+  // botones de idioma
+  var langs='';
+  carg.forEach(function(idm){
+    var ok=disp.indexOf(idm)>=0;
+    langs+='<button class="lang-btn'+(e.idioma===idm&&ok?' active':'')+(ok?'':' agotado-lang')+'"'
+      +(ok?' onclick="cambiarIdiomaCotiz('+idx+',\''+idm+'\')"':' disabled')+'>'+idm+'</button>';
+  });
+
+  var tope=(e.disp>0&&e.disp>=stk);
+  var qtyHtml='';
+  if(e.estado!=='sin'&&!e.off){
+    qtyHtml='<div class="qty-wrap">'
+      +'<button class="qty-btn" onclick="cambiarQtyCotiz('+idx+',-1)" '+(e.disp===0?'disabled':'')+'>-</button>'
+      +'<span class="qty-num'+(tope?' qty-max':'')+'">'+e.disp+'</span>'
+      +'<button class="qty-btn'+(tope?' qty-btn-max':'')+'" onclick="cambiarQtyCotiz('+idx+',1)" '+(e.disp>=stk?'disabled':'')+'>'+(tope?'\u2205':'+')+'</button>'
+      +'</div>';
+  }
+
+  return '<div class="ri'+(e.off?' ri-off':'')+'">'
+    +(url?'<img class="ri-img" src="'+url+'" data-idx="0" onerror="imgFallbackCart(this,'+r[0]+',parseInt(this.getAttribute(\'data-idx\'),10))">':'')
+    +'<div class="ri-body">'
+      +'<div class="ri-name">'+escHtml(r[1])+'</div>'
+      +'<div class="ri-meta">'+r[6]+' \u00B7 '+r[2].toUpperCase()+' '+r[3]+' \u00B7 '+r[4]+' \u00B7 pediste x'+e.item.qty+'</div>'
+      +aviso
+      +'<div class="ri-ctrls">'+selAlt+selRar+langs+qtyHtml+'</div>'
+      +'<div class="ri-badges">'+badges+'</div>'
+    +'</div>'
+    +'<div class="ri-right">'
+      +'<button class="ri-x" onclick="toggleOffCotiz('+idx+')" title="'+(e.off?'Restaurar':'Quitar')+'">'+(e.off?'\u21BA':'\u2715')+'</button>'
+      +'<div><div class="ri-unit">'+(prc>0?clp(prc)+' c/u':'Sin precio')+'</div>'
+      +'<div class="ri-sub">'+clp(sub)+'</div></div>'
+    +'</div></div>';
+}
+
+function buildResumenPK(){
+  var act=COTIZ.filter(function(e){return !e.off;});
+  var enc=act.reduce(function(s,e){return s+e.disp;},0);
+  var ped=COTIZ.reduce(function(s,e){return s+e.item.qty;},0)+COTIZ_NOPE.reduce(function(s,d){return s+d.qty;},0);
+  var falt=ped-enc;
+  var tot=act.reduce(function(s,e){return s+e.disp*getPrecio(e.found,e.idioma);},0);
+  return '<div class="sum-card"><div class="sum-title">Resumen</div>'
+    +'<div class="sum-line"><span>Cartas disponibles</span><strong>'+enc+' de '+ped+'</strong></div>'
+    +(falt>0?'<div class="sum-line"><span>No disponibles</span><strong>'+falt+'</strong></div>':'')
+    +'<div class="sum-line sum-total"><span>Total</span><strong>'+clp(tot)+'</strong></div></div>';
+}
+
+/* ---------- ACCIONES ---------- */
+function toggleNopePK(btn){
+  var b=btn.nextElementSibling;
+  b.style.display=b.style.display==='block'?'none':'block';
+}
+function cambiarQtyCotiz(idx,d){
+  var e=COTIZ[idx]; if(!e) return;
+  var stk=getStock(e.found,e.idioma);
+  e.disp=Math.max(0,Math.min(stk,e.disp+d));
+  e.estado=(stk===0)?'sin':(e.disp>=e.item.qty?'ok':'parcial');
+  renderCotizacion();
+}
+function toggleOffCotiz(idx){
+  var e=COTIZ[idx]; if(!e) return;
+  e.off=!e.off;
+  renderCotizacion();
+}
+function cambiarIdiomaCotiz(idx,idm){
+  var e=COTIZ[idx]; if(!e) return;
+  e.idioma=idm;
+  var stk=getStock(e.found,idm);
+  e.disp=Math.min(e.item.qty,stk);
+  e.estado=(stk===0||getPrecio(e.found,idm)===0)?'sin':(stk>=e.item.qty?'ok':'parcial');
+  renderCotizacion();
+}
+function cambiarRarezaCotiz(idx,uid){
+  var e=COTIZ[idx]; if(!e) return;
+  var nuevo=CARDS.find(function(c){return c[0]===parseInt(uid,10);});
+  if(!nuevo) return;
+  e.found=nuevo;
+  e.idioma=idiomaActivo(nuevo);
+  var stk=getStock(nuevo,e.idioma);
+  e.disp=Math.min(e.item.qty,stk);
+  e.estado=(stk===0||getPrecio(nuevo,e.idioma)===0)?'sin':(stk>=e.item.qty?'ok':'parcial');
+  renderCotizacion();
+}
+function cambiarCartaCotiz(idx,uid){
+  var e=COTIZ[idx]; if(!e) return;
+  var base=CARDS.find(function(c){return c[0]===parseInt(uid,10);});
+  if(!base) return;
+  e.grupo=grupoDeCarta(base);
+  e.found=elegirVariante(e.grupo);
+  e.idioma=idiomaActivo(e.found);
+  var stk=getStock(e.found,e.idioma);
+  e.disp=Math.min(e.item.qty,stk);
+  e.estado=(stk===0||getPrecio(e.found,e.idioma)===0)?'sin':(stk>=e.item.qty?'ok':'parcial');
+  e.fase=1;
+  renderCotizacion();
+}
+
+function agregarCotizacionAlCarrito(){
+  var n=0;
+  COTIZ.forEach(function(e){
+    if(e.off||e.disp<=0) return;
+    var prc=getPrecio(e.found,e.idioma);
+    if(prc<=0) return;
+    var stk=getStock(e.found,e.idioma);
+    var idx=CARRITO.findIndex(function(c){return c.cardId===e.found[0]&&c.idioma===e.idioma;});
+    if(idx>=0) CARRITO[idx].qty=Math.min(stk,CARRITO[idx].qty+e.disp);
+    else CARRITO.push({cardId:e.found[0],nombre:e.found[1],rareza:e.found[4],idioma:e.idioma,
+      precio:prc,qty:Math.min(stk,e.disp),img:imgUrlFor(e.found),set:e.found[2]||'',
+      setNombre:e.found[6]||'',num:e.found[3]||''});
+    n++;
+  });
+  actualizarCarritoBtn();
+  renderAll();
+  cerrarPegarListado();
+  if(n>0) abrirCarrito();
+}
+
 function mostrarBannerListado(){
   var existente=document.getElementById('listado-banner');
   if(existente) existente.remove();
@@ -1202,7 +1576,7 @@ async function enviarPedidoPK(){
     instagram:'@'+ckVal('ck-usuario').replace('@',''),
     items:orderItems,
     entrega:entregaMode,
-    tipo:entregaMode==='retiro'?'Sucursal':(direccionMode==='domicilio'?'Domicilio':'Sucursal'),
+    tipo:entregaMode==='retiro'?'Tienda':(direccionMode==='domicilio'?'Domicilio':'Sucursal'),
     dia:entregaMode==='retiro'?ckVal('ck-retiroDia'):null,
     hora:entregaMode==='retiro'?ckVal('ck-retiroHora'):null,
     rut:entregaMode==='envio'?ckVal('ck-rut'):null,
