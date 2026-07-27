@@ -292,6 +292,7 @@ var RAREZAS=[];
 var IDIOMAS=[];
 var STOCK={}, PRICES={};
 var IMGS={};
+var IMG_CAND={};
 var CARD_IDIOMA={};
 var CARRITO=[];
 var VM='grid';
@@ -321,8 +322,32 @@ function esBrillo(rareza){
   return RAREZAS_BRILLO.indexOf(String(rareza).toUpperCase())>=0;
 }
 
+// Cadena de candidatos: nombre exacto -> base sin rareza -> variante NRML del mismo img_id
+function imgCandidatos(r){
+  var imgId=r[8], nombre=r[1], codSet=r[2], numero=r[3], rareza=r[4];
+  var c=[];
+  c.push(IMG_BASE+nombreArchivoImg(imgId,nombre,codSet,numero,true,rareza));
+  c.push(IMG_BASE+nombreArchivoImg(imgId,nombre,codSet,numero,false,''));
+  c.push(IMG_BASE+nombreArchivoImg(imgId,nombre,codSet,numero,true,'NRML'));
+  var out=[];
+  c.forEach(function(u){if(out.indexOf(u)<0)out.push(u);});
+  return out;
+}
 function imgUrlFor(r){
-  return IMGS[r[0]]||null;
+  var c=IMG_CAND[r[0]];
+  return (c&&c.length)?c[0]:null;
+}
+// onerror encadenado: avanza al siguiente candidato
+function imgFallback(el,uid,idx){
+  var c=IMG_CAND[uid]||[];
+  var next=idx+1;
+  if(next<c.length){ el.setAttribute('data-idx',next); el.src=c[next]; return; }
+  el.onerror=null;
+  var ph=document.createElement('div');
+  ph.className='ph';
+  ph.innerHTML='Imagen no encontrada<br><small style="opacity:.6">'+uid+'</small>';
+  if(el.parentElement) el.parentElement.appendChild(ph);
+  el.remove();
 }
 
 /* ===== stock / precio ===== */
@@ -416,7 +441,8 @@ async function syncGAS(){
 
       CARDS.push([uid,nombre,codSet,numero,rareza,codInt,setNombre,'',imgId,multi,String(it.categoria||'').trim()]);
 
-      IMGS[uid]=IMG_BASE+nombreArchivoImg(imgId,nombre,codSet,numero,multi,rareza);
+      IMG_CAND[uid]=imgCandidatos([uid,nombre,codSet,numero,rareza,codInt,setNombre,'',imgId,multi]);
+      IMGS[uid]=IMG_CAND[uid][0];
 
       IDIOMAS.forEach(function(idm){
         var lo=idm.toLowerCase();
@@ -561,7 +587,7 @@ function filtered(){
     var matchQ=!toks.length||toks.every(function(t){return buscable.indexOf(t)>=0;});
     var matchV=!VF||r[4]===VF;
     var matchS=!SF||(r[6]||'').trim()===SF;
-    var matchL=!LF||(getStock(r,LF)>0&&getPrecio(r,LF)>0);
+    var matchL=!LF||idiomasCargados(r).indexOf(LF)>=0;
     var matchDisp=true;
     if(DISPF==='con') matchDisp=idiomasDisponibles(r).length>0;
     else if(DISPF==='sin') matchDisp=idiomasDisponibles(r).length===0;
@@ -613,7 +639,7 @@ function buildCardHtml(r){
   var idioma=idiomaActivo(r);
   var url=imgUrlFor(r);
   var imgHtml=url
-    ?'<img src="'+url+'" alt="'+r[1]+'" style="width:100%;height:auto;display:block" onerror="this.onerror=null;this.parentElement.innerHTML=\'<div class=&quot;ph&quot;>Imagen no encontrada<br><small style=&quot;opacity:.6&quot;>'+r[0]+'</small></div>\'">'
+    ?'<img src="'+url+'" alt="'+r[1]+'" data-idx="0" style="width:100%;height:auto;display:block" onerror="imgFallback(this,'+r[0]+',parseInt(this.getAttribute(\'data-idx\'),10))">'
     :'<div class="ph">Sin imagen</div>';
 
   var disp=idiomasDisponibles(r);
@@ -622,12 +648,15 @@ function buildCardHtml(r){
   var stk=GAS_LOADED?getStock(r,idioma):0;
   var precio=GAS_LOADED?getPrecio(r,idioma):0;
 
+  var carg=idiomasCargados(r);
   var langHtml='';
-  if(GAS_LOADED&&disp.length){
+  if(GAS_LOADED&&carg.length){
     langHtml='<div class="lang-row">';
-    disp.forEach(function(idm){
+    carg.forEach(function(idm){
+      var ok=disp.indexOf(idm)>=0;
       var act=idioma===idm;
-      langHtml+='<button class="lang-btn'+(act?' active':'')+'" onclick="setIdioma('+r[0]+',\''+idm+'\')">'+idm+'</button>';
+      langHtml+='<button class="lang-btn'+(act&&ok?' active':'')+(ok?'':' agotado-lang')+'"'
+        +(ok?' onclick="setIdioma('+r[0]+',\''+idm+'\')"':' disabled title="Sin stock"')+'>'+idm+'</button>';
     });
     langHtml+='</div>';
   }
@@ -690,17 +719,20 @@ function renderTable(rows,cont){
 function buildRowHtml(r){
   var idioma=idiomaActivo(r);
   var url=imgUrlFor(r);
-  var imgHtml=url?'<img src="'+url+'" alt="'+r[1]+'" style="width:44px;border-radius:4px" onerror="this.onerror=null;this.replaceWith(document.createTextNode(\'\u2014\'))">':'\u2014';
+  var imgHtml=url?'<img src="'+url+'" alt="'+r[1]+'" data-idx="0" style="width:44px;border-radius:4px" onerror="imgFallback(this,'+r[0]+',parseInt(this.getAttribute(\'data-idx\'),10))">':'\u2014';
 
   var langCell='\u2014',precioCell='\u2014',stkCell='\u2014',cartCell='';
   if(GAS_LOADED){
     var disp=idiomasDisponibles(r);
     var stk=getStock(r,idioma);
     var prc=getPrecio(r,idioma);
+    var carg=idiomasCargados(r);
     var langBtns='';
-    disp.forEach(function(idm){
+    carg.forEach(function(idm){
+      var ok=disp.indexOf(idm)>=0;
       var act=idioma===idm;
-      langBtns+='<button class="lang-btn'+(act?' active':'')+'" onclick="setIdioma('+r[0]+',\''+idm+'\')">'+idm+'</button> ';
+      langBtns+='<button class="lang-btn'+(act&&ok?' active':'')+(ok?'':' agotado-lang')+'"'
+        +(ok?' onclick="setIdioma('+r[0]+',\''+idm+'\')"':' disabled title="Sin stock"')+'>'+idm+'</button> ';
     });
     langCell=langBtns||'\u2014';
     precioCell=prc>0?clp(prc):'Sin precio';
