@@ -371,10 +371,10 @@ function numPK(x){return String(x||'').trim().split('/')[0].replace(/[^0-9A-Za-z
 function rarPK(r){return String(r||'').replace(/\//g,'-').replace(/\s+/g,'');}
 
 // Replica exacta de nombreArchivoImgPK_ del Apps Script
-function nombreArchivoImg(imgId,nombre,codSet,numero,multi,rareza){
-  var b=String(imgId).padStart(4,'0')+'_'+camelPK(nombre)+'_'+camelPK(codSet)+'_'+numPK(numero);
-  if(multi) b+='_'+rarPK(rareza);
-  return b+'.jpg';
+function nombreArchivoImg(codInt,multi,rareza){
+  if(!codInt) return '';
+  if(multi && rareza) return codInt+'_'+rarPK(rareza)+'.jpg';
+  return codInt+'.jpg';
 }
 
 function esBrillo(rareza){
@@ -390,13 +390,13 @@ function esBrillo(rareza){
 // (ej: TRT23 sin archivo usa la de TRT24; la unica diferencia visual
 //  entre variantes es el efecto de brillo, que es CSS).
 function imgCandidatos(r,rarezasHermanas){
-  var imgId=r[8], nombre=r[1], codSet=r[2], numero=r[3], rareza=r[4];
+  var codInt=r[5], rareza=r[4];
   var c=[];
-  c.push(IMG_BASE+nombreArchivoImg(imgId,nombre,codSet,numero,true,rareza));
-  c.push(IMG_BASE+nombreArchivoImg(imgId,nombre,codSet,numero,false,''));
-  c.push(IMG_BASE+nombreArchivoImg(imgId,nombre,codSet,numero,true,'NRML'));
+  c.push(IMG_BASE+nombreArchivoImg(codInt,true,rareza));
+  c.push(IMG_BASE+nombreArchivoImg(codInt,false,''));
+  c.push(IMG_BASE+nombreArchivoImg(codInt,true,'NRML'));
   (rarezasHermanas||[]).forEach(function(rn){
-    c.push(IMG_BASE+nombreArchivoImg(imgId,nombre,codSet,numero,true,rn));
+    c.push(IMG_BASE+nombreArchivoImg(codInt,true,rn));
   });
   var out=[];
   c.forEach(function(u){if(out.indexOf(u)<0)out.push(u);});
